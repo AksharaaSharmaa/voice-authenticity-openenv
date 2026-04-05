@@ -4,16 +4,18 @@ from pydantic import BaseModel
 from typing import Optional
 import uvicorn
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment.env import VoiceAuthenticityEnv
 
 app = FastAPI(title="Voice Authenticity OpenEnv")
 
-# Global env instances per task
 envs = {
-    "clean_detection":      VoiceAuthenticityEnv("clean_detection"),
-    "compressed_detection": VoiceAuthenticityEnv("compressed_detection"),
-    "adversarial_detection":VoiceAuthenticityEnv("adversarial_detection"),
+    "clean_detection":       VoiceAuthenticityEnv("clean_detection"),
+    "compressed_detection":  VoiceAuthenticityEnv("compressed_detection"),
+    "adversarial_detection": VoiceAuthenticityEnv("adversarial_detection"),
 }
 
 current_task = "clean_detection"
@@ -70,5 +72,8 @@ def health():
 def root():
     return {"name": "voice-authenticity-openenv", "status": "running"}
 
-if __name__ == "__main__":
+def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
