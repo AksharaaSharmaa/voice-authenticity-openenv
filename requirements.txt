@@ -7,4 +7,4 @@ pydantic
 python-dotenv
 soundfile
 fastapi
-uvicorn
+openenv-core>=0.2.0
