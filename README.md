@@ -1,8 +1,11 @@
-Here's your complete README:
-
 ---
-
-```markdown
+title: Voice Authenticity OpenEnv
+emoji: 🎙️
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+---
 # 🎙️ Voice Authenticity Detection — OpenEnv Environment
 
 An reinforcement learning environment for training and evaluating AI agents 
