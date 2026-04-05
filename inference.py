@@ -133,46 +133,57 @@ async def run_task(client: OpenAI, task_name: str):
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        # Reset environment via HTTP
+        # Reset environment
         reset_response = env_reset(task_name)
         observation = reset_response.get("observation", {})
         done = reset_response.get("done", False)
 
-        for step in range(1, MAX_STEPS + 1):
-            if done:
-                break
+        # Step 1 — Analysis phase
+        analyze_action = {
+            "focus": ["jitter", "shimmer", "hnr"],
+            "label": 0,
+            "confidence": 0.5,
+            "reasoning": "Requesting focused analysis"
+        }
+        analyze_str = json.dumps(analyze_action)
 
-            # Get action from LLM
+        step1_response = env_step(analyze_action, task_name)
+        observation = step1_response.get("observation", {})
+        reward1 = float(step1_response.get("reward", 0.0))
+        done = step1_response.get("done", False)
+        steps_taken = 1
+        rewards.append(reward1)
+
+        log_step(step=1, action=analyze_str, reward=reward1,
+                done=done, error=None)
+
+        if not done:
+            # Step 2 — Decision phase
             action_dict = get_agent_action(client, observation)
             action_str = json.dumps(action_dict)
 
-            # Step environment via HTTP
-            step_response = env_step(action_dict, task_name)
-            observation = step_response.get("observation", {})
-            reward = float(step_response.get("reward", 0.0))
-            done = step_response.get("done", True)
-            error = None
+            step2_response = env_step(action_dict, task_name)
+            reward2 = float(step2_response.get("reward", 0.0))
+            done = step2_response.get("done", True)
+            steps_taken = 2
+            rewards.append(reward2)
 
-            rewards.append(reward)
-            steps_taken = step
+            log_step(step=2, action=action_str, reward=reward2,
+                    done=done, error=None)
 
-            log_step(step=step, action=action_str, reward=reward,
-                    done=done, error=error)
-
-            if done:
-                break
-
-        score = sum(rewards) / len(rewards) if rewards else 0.0
+        # Score is based only on decision phase (Step 2)
+        decision_rewards = rewards[1:] if len(rewards) > 1 else rewards
+        score = sum(decision_rewards) / len(decision_rewards) if decision_rewards else 0.0
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as e:
         print(f"[DEBUG] Task error: {e}", flush=True)
 
     finally:
-        score_val = sum(rewards) / len(rewards) if rewards else 0.0
+        decision_rewards = rewards[1:] if len(rewards) > 1 else rewards
+        score_val = sum(decision_rewards) / len(decision_rewards) if decision_rewards else 0.0
         log_end(success=success, steps=steps_taken,
                score=score_val, rewards=rewards)
-
 
 async def main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)

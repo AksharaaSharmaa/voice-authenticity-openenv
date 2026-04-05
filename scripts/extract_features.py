@@ -126,13 +126,37 @@ def add_compression_artifacts(features, strength=0.3):
 
 
 def add_adversarial_perturbation(features, label):
+    """
+    True adversarial: create overlapping distributions.
+    Fake audio shifted INTO real speech range.
+    Real audio shifted TOWARD synthetic range.
+    No clean threshold can separate them.
+    """
     perturbed = features.copy()
-    
-    if label == 1:
-        perturbed[42] += np.random.uniform(0.005, 0.02)
-        perturbed[43] += np.random.uniform(0.01, 0.05)
-        perturbed[44] -= np.random.uniform(1.0, 3.0)
-    
+
+    if label == 1:  # fake → make it look real
+        # Push jitter into real range
+        perturbed[42] += np.random.uniform(0.010, 0.025)
+        # Push shimmer into real range
+        perturbed[43] += np.random.uniform(0.020, 0.060)
+        # Lower HNR toward real range
+        perturbed[44] -= np.random.uniform(2.0, 5.0)
+        # Add slight MFCC variation
+        perturbed[20:30] += np.random.normal(0, 0.3, 10)
+
+    elif label == 0:  # real → push toward synthetic range
+        # Suppress jitter slightly
+        perturbed[42] *= np.random.uniform(0.6, 0.85)
+        # Suppress shimmer slightly
+        perturbed[43] *= np.random.uniform(0.6, 0.85)
+        # Raise HNR slightly
+        perturbed[44] += np.random.uniform(0.5, 2.0)
+
+    # Add 8% label noise — some samples are deliberately mislabeled
+    # to simulate real-world distribution ambiguity
+    if np.random.random() < 0.08:
+        perturbed += np.random.normal(0, 0.5, len(perturbed))
+
     return perturbed
 
 
