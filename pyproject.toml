@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "voice-authenticity-openenv"
+version = "1.0.0"
+description = "Voice authenticity detection OpenEnv environment"
+requires-python = ">=3.10"
+dependencies = [
+    "librosa",
+    "praat-parselmouth",
+    "scikit-learn",
+    "numpy",
+    "openai",
+    "pydantic>=2.0.0",
+    "python-dotenv",
+    "soundfile",
+    "fastapi",
+    "uvicorn",
+]
+
+[tool.openenv]
+name = "voice-authenticity"
+version = "1.0.0"
+tasks = ["clean_detection", "compressed_detection", "adversarial_detection"]
+entry_point = "app:app"
