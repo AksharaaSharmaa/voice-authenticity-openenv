@@ -1,0 +1,8 @@
+librosa
+praat-parselmouth
+scikit-learn
+numpy
+openai
+pydantic
+python-dotenv
+soundfile

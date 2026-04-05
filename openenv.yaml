@@ -1,0 +1,39 @@
+name: voice-authenticity
+version: "1.0.0"
+description: "Voice authenticity detection across real-world degradation conditions"
+author: "Akshara-Sharma"
+tags: ["speech", "fraud-detection", "content-moderation", "audio"]
+tasks:
+  - name: clean_detection
+    difficulty: easy
+    description: "Classify real vs synthetic speech from clean audio features"
+  - name: compressed_detection
+    difficulty: medium  
+    description: "Classify speech under codec compression degradation"
+  - name: adversarial_detection
+    difficulty: hard
+    description: "Classify adversarially crafted synthetic speech"
+observation_space:
+  type: object
+  properties:
+    features:
+      type: array
+      description: "48-dim feature vector: MFCCs, jitter, shimmer, HNR"
+    task_name:
+      type: string
+    step_number:
+      type: integer
+    difficulty:
+      type: string
+action_space:
+  type: object
+  properties:
+    label:
+      type: integer
+      description: "0=real, 1=synthetic"
+    confidence:
+      type: number
+      description: "confidence in [0.0, 1.0]"
+    reasoning:
+      type: string
+      description: "brief explanation of decision"
