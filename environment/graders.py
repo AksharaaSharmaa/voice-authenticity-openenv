@@ -5,29 +5,26 @@ def grade(true_label: int, action: dict, difficulty: str) -> float:
 
     if difficulty == "easy":
         if correct:
-            return 1.0
+            return 0.95   # was 1.0
         else:
-            return 0.0
+            return 0.05   # was 0.0
 
     elif difficulty == "medium":
         if correct:
-            # reward confidence when correct
             base = 0.6
-            bonus = 0.4 * confidence
+            bonus = 0.35 * confidence   # max = 0.95
             return round(base + bonus, 3)
         else:
-            # penalize overconfidence when wrong
             penalty = 0.3 * confidence
-            return round(max(0.0, 0.2 - penalty), 3)
+            return round(max(0.05, 0.2 - penalty), 3)
 
     elif difficulty == "hard":
         if correct:
-            # correct but penalize overconfidence (hard task, be humble)
             base = 0.5
-            calibration_bonus = 0.5 * (1 - abs(confidence - 0.7))
+            calibration_bonus = 0.45 * (1 - abs(confidence - 0.7))
             return round(base + calibration_bonus, 3)
         else:
             if confidence < 0.4:
-                return 0.15   # wrong but appropriately uncertain
+                return 0.15
             else:
-                return 0.0    # wrong + overconfident = worst case
+                return 0.05   # was 0.0
