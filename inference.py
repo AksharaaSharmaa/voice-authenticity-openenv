@@ -68,15 +68,17 @@ def log_step(step, action, reward, done, error):
     if isinstance(action, dict):
         action_type = action.get("action_type", "")
         if action_type == "final_classify":
-            label = action.get("label", 0)
-            conf = action.get("confidence", 0.5)
-            action_str = f"final_classify label={label} confidence={conf:.2f}"
+            action_json = json.dumps({
+                "action_type": "final_classify",
+                "label": action.get("label", 0),
+                "confidence": round(action.get("confidence", 0.5), 2)
+            })
         else:
-            action_str = action_type or str(action)
+            action_json = json.dumps({"action_type": action_type})
     else:
-        action_str = str(action)
+        action_json = json.dumps({"action_type": str(action)})
     print(
-        f"[STEP] step={step} action={action_str} "
+        f"[STEP] step={step} action={action_json} "
         f"reward={reward:.2f} done={str(done).lower()} error={error_val}",
         flush=True,
     )
