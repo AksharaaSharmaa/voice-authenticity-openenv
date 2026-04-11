@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pramanik AI — Voice Authenticity OpenEnv</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #070d0f;
+            --bg2: #0c1518;
+            --bg3: #111d20;
+            --teal: #14b8a6;
+            --teal-dim: #0d9488;
+            --teal-dark: #042f2e;
+            --teal-mid: #134e4a;
+            --teal-glow: #0f766e;
+            --text: #ccfbf1;
+            --text-dim: #5eead4;
+            --text-muted: #2dd4bf;
+            --text-faint: #3d8a82;
+            --border: #0f4f4a;
+            --border-bright: #0d9488;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: var(--text)
+        }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--bg2);
+            border-bottom: 0.5px solid var(--border);
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--teal), transparent)
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--teal-mid), transparent)
+        }
+
+        .brand {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--teal);
+            letter-spacing: -1.5px;
+            line-height: 1
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            letter-spacing: 0.25em;
+            color: var(--teal-glow);
+            text-transform: uppercase;
+            margin-top: 8px
+        }
+
+        .hero-line {
+            width: 40px;
+            height: 1px;
+            background: var(--teal-mid);
+            margin: 1.5rem auto
+        }
+
+        .hero-tagline {
+            font-size: 16px;
+            color: var(--text-dim);
+            max-width: 540px;
+            margin: 0 auto;
+            line-height: 1.85
+        }
+
+        .badge-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1.75rem;
+            flex-wrap: wrap
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--teal-dark);
+            border: 0.5px solid var(--teal-mid);
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 0.02em
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--teal);
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        /* ── Body ── */
+        .body {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem
+        }
+
+        /* ── Stats ── */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 2.5rem
+        }
+
+        .stat {
+            background: var(--bg2);
+            border: 0.5px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem 1.25rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden
+        }
+
+        .stat::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--teal-dim), transparent)
+        }
+
+        .stat-n {
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--teal);
+            letter-spacing: -1px
+        }
+
+        .stat-l {
+            font-size: 13px;
+            color: var(--text-faint);
+            margin-top: 6px;
+            line-height: 1.5
+        }
+
+        .stat-s {
+            font-size: 11px;
+            color: var(--teal-mid);
+            margin-top: 4px
+        }
+
+        /* ── Section card ── */
+        .sec {
+            background: var(--bg2);
+            border: 0.5px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden
+        }
+
+        .sec::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--teal-mid), transparent)
+        }
+
+        .sec-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.5rem
+        }
+
+        .sec-num {
+            width: 24px;
+            height: 24px;
+            background: var(--teal-dark);
+            border: 0.5px solid var(--teal-mid);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--teal);
+            flex-shrink: 0
+        }
+
+        .sec-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text)
+        }
+
+        .sec-desc {
+            font-size: 13px;
+            color: var(--text-faint);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            margin-top: 0.5rem;
+            padding-left: 34px
+        }
+
+        /* ── Steps ── */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .step {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 0.5px solid var(--border);
+            background: var(--bg3);
+            transition: border-color 0.25s, background 0.25s
+        }
+
+        .step.active {
+            border-color: var(--teal-dim);
+            background: var(--teal-dark)
+        }
+
+        .step.done {
+            border-color: var(--teal-mid);
+            opacity: 0.65
+        }
+
+        .step-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--teal-dark);
+            border: 0.5px solid var(--teal-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--teal);
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: background 0.2s, border-color 0.2s
+        }
+
+        .step.active .step-circle {
+            background: var(--teal);
+            border-color: var(--teal);
+            color: var(--bg)
+        }
+
+        .step.done .step-circle {
+            background: var(--teal-mid);
+            border-color: var(--teal-mid);
+            color: var(--text-dim)
+        }
+
+        .step-body {
+            flex: 1
+        }
+
+        .step-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim)
+        }
+
+        .step-plain {
+            font-size: 12px;
+            color: var(--text-faint);
+            margin-top: 4px;
+            line-height: 1.6
+        }
+
+        .chip {
+            display: inline-block;
+            font-size: 10px;
+            background: var(--teal-dark);
+            color: var(--text-muted);
+            border: 0.5px solid var(--teal-mid);
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin-top: 6px;
+            letter-spacing: 0.03em
+        }
+
+        .step-rew {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--teal);
+            flex-shrink: 0;
+            padding-top: 3px;
+            min-width: 40px;
+            text-align: right
+        }
+
+        /* ── Two col ── */
+        .two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 1.5rem;
+            align-items: start
+        }
+
+        /* ── Task list ── */
+        .task-item {
+            padding: 12px 0;
+            border-bottom: 0.5px solid var(--teal-dark);
+            cursor: pointer;
+            transition: opacity 0.15s
+        }
+
+        .task-item:last-child {
+            border: none
+        }
+
+        .task-item:hover .tname {
+            color: var(--teal)
+        }
+
+        .ttop {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px
+        }
+
+        .tname {
+            font-size: 13px;
+            color: var(--text-dim);
+            transition: color 0.15s;
+            font-weight: 500
+        }
+
+        .diff {
+            font-size: 10px;
+            padding: 3px 9px;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.04em
+        }
+
+        .d1 {
+            background: rgba(20, 184, 166, 0.1);
+            color: #2dd4bf;
+            border: 0.5px solid var(--teal-mid)
+        }
+
+        .d2 {
+            background: rgba(251, 191, 36, 0.08);
+            color: #fbbf24;
+            border: 0.5px solid #92400e
+        }
+
+        .d3 {
+            background: rgba(251, 146, 60, 0.08);
+            color: #fb923c;
+            border: 0.5px solid #7c2d12
+        }
+
+        .d4 {
+            background: rgba(248, 113, 113, 0.08);
+            color: #f87171;
+            border: 0.5px solid #7f1d1d
+        }
+
+        .bar-bg {
+            height: 5px;
+            background: var(--teal-dark);
+            border-radius: 3px
+        }
+
+        .bar-fg {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease
+        }
+
+        .tbot {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px
+        }
+
+        .tscore {
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .tdesc {
+            font-size: 11px;
+            color: var(--text-faint)
+        }
+
+        /* ── Breakdown ── */
+        .bk-intro {
+            font-size: 13px;
+            color: var(--text-faint);
+            line-height: 1.7;
+            margin-bottom: 1.25rem;
+            padding: 10px 12px;
+            background: var(--bg3);
+            border-radius: 8px;
+            border-left: 2px solid var(--teal-mid)
+        }
+
+        .bk-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px
+        }
+
+        .bk {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg3);
+            border-radius: 9px;
+            border: 0.5px solid var(--border)
+        }
+
+        .bk-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            background: var(--teal-dark);
+            border: 0.5px solid var(--teal-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0
+        }
+
+        .bk-icon svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--teal)
+        }
+
+        .bk-body {
+            flex: 1
+        }
+
+        .bk-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim)
+        }
+
+        .bk-desc {
+            font-size: 11px;
+            color: var(--text-faint);
+            margin-top: 2px;
+            line-height: 1.4
+        }
+
+        .bk-val {
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+            min-width: 32px;
+            text-align: right
+        }
+
+        /* ── Terminal ── */
+        .term-wrap {
+            background: var(--bg3);
+            border: 0.5px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+        .term-bar {
+            background: rgba(20, 184, 166, 0.06);
+            border-bottom: 0.5px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .tdot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%
+        }
+
+        .term-label {
+            font-size: 11px;
+            color: var(--text-faint);
+            margin-left: 6px;
+            font-family: monospace
+        }
+
+        .term-body {
+            padding: 16px;
+            font-family: 'SF Mono', Consolas, monospace;
+            min-height: 170px
+        }
+
+        .tl {
+            font-size: 11px;
+            line-height: 2
+        }
+
+        .tl-s {
+            color: var(--teal)
+        }
+
+        .tl-p {
+            color: var(--text-dim)
+        }
+
+        .tl-e {
+            color: #2dd4bf;
+            font-weight: 600
+        }
+
+        .tl-f {
+            color: var(--text-faint)
+        }
+
+        .run-btn {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 12px;
+            background: var(--teal-dim);
+            border: none;
+            border-radius: 9px;
+            color: #f0fdfa;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: background 0.15s
+        }
+
+        .run-btn:hover {
+            background: var(--teal)
+        }
+
+        .run-btn:disabled {
+            background: var(--teal-dark);
+            color: var(--text-faint);
+            cursor: not-allowed
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 2.5rem 2rem;
+            border-top: 0.5px solid var(--border);
+            font-size: 12px;
+            color: var(--text-faint)
+        }
+
+        .footer a {
+            color: var(--teal-glow);
+            text-decoration: none
+        }
+
+        .footer a:hover {
+            color: var(--teal)
+        }
+
+        @media(max-width:680px) {
+            .stats {
+                grid-template-columns: 1fr
+            }
+
+            .two {
+                grid-template-columns: 1fr
+            }
+
+            .brand {
+                font-size: 30px
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="hero">
+        <div class="brand">Pramanik AI</div>
+        <div class="brand-sub">Voice Authenticity OpenEnv</div>
+        <div class="hero-line"></div>
+        <div class="hero-tagline">An AI training environment that teaches agents to detect deepfake voices — the kind
+            used in phone scams, CEO impersonation, and identity fraud at scale.</div>
+        <div class="badge-row">
+            <div class="badge">
+                <div class="dot"></div>Live on HuggingFace Spaces
+            </div>
+            <div class="badge">5 investigation tasks</div>
+            <div class="badge">6-component scoring</div>
+            <div class="badge">Partial observability</div>
+            <div class="badge">48-dimensional features</div>
+        </div>
+    </div>
+
+    <div class="body">
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-n">$25B+</div>
+                <div class="stat-l">lost to voice fraud globally every year</div>
+                <div class="stat-s">banking · insurance · telecom · government</div>
+            </div>
+            <div class="stat">
+                <div class="stat-n">60s</div>
+                <div class="stat-l">to clone any voice with modern AI tools</div>
+                <div class="stat-s">real-time phone scams now possible at scale</div>
+            </div>
+            <div class="stat">
+                <div class="stat-n">0</div>
+                <div class="stat-l">existing benchmarks train agents this way</div>
+                <div class="stat-s">this environment fills that gap</div>
+            </div>
+        </div>
+
+        <div class="sec">
+            <div class="sec-head">
+                <div class="sec-num">1</div>
+                <div class="sec-title">How the AI agent investigates a voice</div>
+            </div>
+            <div class="sec-desc">Most AI classifiers make a snap judgment from full information. This environment
+                forces the agent to work like a detective — starting with zero information, then gathering evidence step
+                by step before committing to a verdict. Skipping steps is penalised.</div>
+            <div class="steps" id="steps">
+                <div class="step">
+                    <div class="step-circle">1</div>
+                    <div class="step-body">
+                        <div class="step-title">Check for natural vocal tremors</div>
+                        <div class="step-plain">Real human voices have tiny involuntary wobbles in pitch and volume. AI
+                            voices are unnaturally steady and smooth. The agent measures these micro-tremors first —
+                            they are the strongest early signal.</div>
+                        <div class="chip">Jitter &middot; Shimmer &middot; HNR</div>
+                    </div>
+                    <div class="step-rew">+0.10</div>
+                </div>
+                <div class="step">
+                    <div class="step-circle">2</div>
+                    <div class="step-body">
+                        <div class="step-title">Read the voice's sonic fingerprint</div>
+                        <div class="step-plain">Every voice has a unique tonal texture — like acoustic DNA. The agent
+                            examines 48 characteristics covering brightness, depth, and spectral variation across the
+                            full frequency range.</div>
+                        <div class="chip">48-dimensional feature vector</div>
+                    </div>
+                    <div class="step-rew">+0.10</div>
+                </div>
+                <div class="step">
+                    <div class="step-circle">3</div>
+                    <div class="step-body">
+                        <div class="step-title">Compare against a database of known voices</div>
+                        <div class="step-plain">The agent measures how similar this sample is to confirmed real and
+                            AI-generated voices — like comparing a fingerprint to a known database. It gets both a
+                            similarity score and a distance measurement.</div>
+                        <div class="chip">Cosine similarity &middot; Centroid distance</div>
+                    </div>
+                    <div class="step-rew">+0.05</div>
+                </div>
+                <div class="step">
+                    <div class="step-circle">4</div>
+                    <div class="step-body">
+                        <div class="step-title">Weigh all evidence before deciding</div>
+                        <div class="step-plain">Before giving a verdict, the agent reviews everything it found, looks
+                            for contradictions between the signals, and works out how confident it should be. This step
+                            is required — skipping it is penalised.</div>
+                        <div class="chip">Evidence synthesis</div>
+                    </div>
+                    <div class="step-rew">+0.05</div>
+                </div>
+                <div class="step">
+                    <div class="step-circle">5</div>
+                    <div class="step-body">
+                        <div class="step-title">Give a verdict with honest confidence</div>
+                        <div class="step-plain">The agent declares the voice real or fake — and states how confident it
+                            is. Being 90% confident when wrong is penalised far more than saying "I'm only 50% sure."
+                            This mirrors how real fraud decisions should work.</div>
+                        <div class="chip">Final classification &middot; Confidence calibration</div>
+                    </div>
+                    <div class="step-rew">scored</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="two">
+            <div class="sec" style="margin-bottom:0">
+                <div class="sec-head">
+                    <div class="sec-num">2</div>
+                    <div class="sec-title">Five tests of increasing difficulty</div>
+                </div>
+                <div class="sec-desc" style="margin-bottom:1.25rem">Each test uses a different type of audio
+                    degradation. Click any row to see the full score breakdown.</div>
+                <div id="task-list">
+                    <div class="task-item" onclick="sel(0)">
+                        <div class="ttop"><span class="tname">Clean studio recording</span><span
+                                class="diff d1">easiest</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fg" style="width:74%;background:var(--teal)"></div>
+                        </div>
+                        <div class="tbot"><span class="tscore" style="color:var(--teal)">74% score</span><span
+                                class="tdesc">Agent detects reliably</span></div>
+                    </div>
+                    <div class="task-item" onclick="sel(1)">
+                        <div class="ttop"><span class="tname">Compressed / low-quality audio</span><span
+                                class="diff d2">medium</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fg" style="width:62%;background:#fbbf24"></div>
+                        </div>
+                        <div class="tbot"><span class="tscore" style="color:#fbbf24">62% score</span><span
+                                class="tdesc">Compression hides the clues</span></div>
+                    </div>
+                    <div class="task-item" onclick="sel(2)">
+                        <div class="ttop"><span class="tname">AI voice engineered to sound human</span><span
+                                class="diff d3">hard</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fg" style="width:55%;background:#fb923c"></div>
+                        </div>
+                        <div class="tbot"><span class="tscore" style="color:#fb923c">55% score</span><span
+                                class="tdesc">Adversarial AI fools the agent</span></div>
+                    </div>
+                    <div class="task-item" onclick="sel(3)">
+                        <div class="ttop"><span class="tname">Noisy live-stream conditions</span><span
+                                class="diff d3">very hard</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fg" style="width:30%;background:#fb923c"></div>
+                        </div>
+                        <div class="tbot"><span class="tscore" style="color:#fb923c">30% score</span><span
+                                class="tdesc">Background noise overwhelms signal</span></div>
+                    </div>
+                    <div class="task-item" onclick="sel(4)">
+                        <div class="ttop"><span class="tname">Real phone call conditions</span><span
+                                class="diff d4">extreme</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fg" style="width:22%;background:#f87171"></div>
+                        </div>
+                        <div class="tbot"><span class="tscore" style="color:#f87171">22% score</span><span
+                                class="tdesc">Near the limit of detection</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sec" style="margin-bottom:0" id="bk-card">
+                <div class="sec-head">
+                    <div class="sec-num">3</div>
+                    <div class="sec-title">How the score is calculated</div>
+                </div>
+                <div class="bk-intro" id="bk-intro">Getting the right answer is only part of the score. Click any test
+                    on the left to see its breakdown across all six components.</div>
+                <div class="bk-list">
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M13.5 2.5l-8 8-3-3-1.5 1.5 4.5 4.5 9.5-9.5z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Got the right answer</div>
+                            <div class="bk-desc">Real or fake — was the verdict correct?</div>
+                        </div>
+                        <div class="bk-val" id="v0">—</div>
+                    </div>
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 11V7h2v4H7zm0-6V3.5h2V5H7z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Honest about uncertainty</div>
+                            <div class="bk-desc">Overconfidence when wrong is penalised heavily</div>
+                        </div>
+                        <div class="bk-val" id="v1">—</div>
+                    </div>
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M2 4h12v1.5H2zm0 3.5h8v1.5H2zm0 3.5h10v1.5H2z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Followed investigation steps</div>
+                            <div class="bk-desc">Gathered evidence before deciding</div>
+                        </div>
+                        <div class="bk-val" id="v2">—</div>
+                    </div>
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M3 2h10v12H3zM5 5h6v1.5H5zm0 3h6v1.5H5zm0 3h4v1.5H5z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Used all available clues</div>
+                            <div class="bk-desc">Checked both tremors and tonal texture</div>
+                        </div>
+                        <div class="bk-val" id="v3">—</div>
+                    </div>
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M2 3h12v2H2zm2 4h8v2H4zm-2 4h12v2H2z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Explanation matched decision</div>
+                            <div class="bk-desc">Reasoning actually supported the verdict given</div>
+                        </div>
+                        <div class="bk-val" id="v4">—</div>
+                    </div>
+                    <div class="bk">
+                        <div class="bk-icon"><svg viewBox="0 0 16 16">
+                                <path d="M3 2l10 6-10 6V2z" />
+                            </svg></div>
+                        <div class="bk-body">
+                            <div class="bk-title">Did things in logical order</div>
+                            <div class="bk-desc">Gather first, analyse second, decide last</div>
+                        </div>
+                        <div class="bk-val" id="v5">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sec">
+            <div class="sec-head">
+                <div class="sec-num">4</div>
+                <div class="sec-title">Watch it work — live investigation</div>
+            </div>
+            <div class="sec-desc">Press the button to simulate an agent investigating a voice sample in real time. Each
+                line is an actual log message emitted by the agent as it works through the five steps.</div>
+            <div class="term-wrap">
+                <div class="term-bar">
+                    <div class="tdot" style="background:#f87171"></div>
+                    <div class="tdot" style="background:#fbbf24"></div>
+                    <div class="tdot" style="background:var(--teal)"></div>
+                    <span class="term-label">inference.py &mdash; voice-authenticity-openenv</span>
+                </div>
+                <div class="term-body" id="term">
+                    <div class="tl tl-f">Ready. Press the button below to begin an investigation.</div>
+                </div>
+            </div>
+            <button class="run-btn" id="rbtn" onclick="runDemo()">Investigate a voice sample</button>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Pramanik AI &nbsp;&middot;&nbsp; Voice Authenticity OpenEnv &nbsp;&middot;&nbsp;
+        <a href="https://huggingface.co/spaces/AksharaSharma/voice-authenticity-openenv" target="_blank">HuggingFace
+            Space</a>
+    </div>
+
+    <script>
+        const tasks = [
+            { n: 'clean_detection', plain: 'Clean studio recording', l: 0, s: '0.74', sc: [0.95, 0.90, 0.95, 0.95, 0.95, 0.95] },
+            { n: 'compressed_detection', plain: 'Compressed audio', l: 0, s: '0.62', sc: [0.95, 0.90, 0.95, 0.95, 0.95, 0.95] },
+            { n: 'adversarial_detection', plain: 'Adversarial AI voice', l: 1, s: '0.55', sc: [0.95, 0.85, 0.95, 0.95, 0.95, 0.95] },
+            { n: 'streaming_detection', plain: 'Noisy live-stream', l: 1, s: '0.30', sc: [0.05, 0.10, 0.95, 0.95, 0.95, 0.95] },
+            { n: 'phonecall_detection', plain: 'Phone call conditions', l: 1, s: '0.22', sc: [0.05, 0.10, 0.95, 0.95, 0.50, 0.95] }
+        ];
+
+        function sel(i) {
+            const t = tasks[i];
+            document.getElementById('bk-intro').textContent = 'Score breakdown for: "' + t.plain + '" — final score ' + t.s;
+            for (let j = 0; j < 6; j++) {
+                const el = document.getElementById('v' + j);
+                el.textContent = t.sc[j].toFixed(2);
+                el.style.color = t.sc[j] > 0.5 ? '#14b8a6' : '#f87171';
+            }
+        }
+
+        const stepLines = [
+            t => '[START] task=' + t.n + '  env=voice-authenticity  model=Qwen2.5-72B',
+            () => '[STEP 1] Measuring vocal tremors (jitter, shimmer, HNR)...  reward=+0.10  done=false',
+            () => '[STEP 2] Reading 48-dimensional sonic fingerprint...  reward=+0.10  done=false',
+            () => '[STEP 3] Comparing to known real/fake voice database...  reward=+0.05  done=false',
+            () => '[STEP 4] Synthesising all gathered evidence...  reward=+0.05  done=false',
+            t => '[STEP 5] Verdict: ' + (t.l === 0 ? 'REAL VOICE' : 'FAKE VOICE') + '  confidence=75%  reward=' + t.s + '  done=true',
+            t => '[END]  success=' + (parseFloat(t.s) >= 0.6) + '  steps=5  final_score=' + t.s
+        ];
+        const cls = ['tl-s', 'tl-p', 'tl-p', 'tl-p', 'tl-p', 'tl-p', 'tl-e'];
+
+        function runDemo() {
+            const btn = document.getElementById('rbtn');
+            btn.disabled = true;
+            btn.textContent = 'Investigating...';
+            const term = document.getElementById('term');
+            term.innerHTML = '';
+            const ti = Math.floor(Math.random() * 5);
+            const t = tasks[ti];
+            const steps = document.querySelectorAll('.step');
+            steps.forEach(s => s.classList.remove('active', 'done'));
+            let i = 0;
+            function next() {
+                if (i < stepLines.length) {
+                    if (i >= 1 && i <= 5) {
+                        if (i > 1) steps[i - 2].classList.replace('active', 'done');
+                        steps[i - 1].classList.add('active');
+                    }
+                    const d = document.createElement('div');
+                    d.className = 'tl ' + cls[i];
+                    d.textContent = stepLines[i](t);
+                    term.appendChild(d);
+                    i++;
+                    setTimeout(next, 750);
+                } else {
+                    steps.forEach(s => { s.classList.remove('active'); s.classList.add('done') });
+                    sel(ti);
+                    btn.disabled = false;
+                    btn.textContent = 'Investigate another sample';
+                }
+            }
+            next();
+        }
+    </script>
+</body>
+
+</html>
