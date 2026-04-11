@@ -349,6 +349,16 @@ curl -X POST http://localhost:7860/reset
 python inference.py
 ```
 
+### Running Tests
+```bash
+# Run all tests
+pytest test_env.py -v
+
+# Run individual tests
+pytest test_env.py::test_reset_returns_observation -v
+pytest test_env.py::test_five_actions_complete_episode -v
+```
+
 ### Environment Variables
 
 | Variable | Description | Default |
@@ -392,14 +402,60 @@ voice-authenticity-openenv/
 │   └── extract_features.py # audio → feature vectors (5 tasks)
 ├── server/
 │   └── app.py              # OpenEnv HTTP server entry point
-├── app.py                  # FastAPI server (root)
+├── Dashboard.html          # interactive web dashboard (served at / and /web)
+├── app.py                  # FastAPI server (serves Dashboard.html + API)
 ├── inference.py            # baseline LLM agent (5-action protocol)
+├── test_env.py             # environment unit tests (5 tests)
+├── test_inference.py       # inference script template (OpenEnv format)
 ├── openenv.yaml            # OpenEnv spec (5 tasks)
 ├── pyproject.toml          # package config
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+## 🖥️ Web Dashboard
+
+`Dashboard.html` is a self-contained, interactive web interface served at both `/` and `/web` when the server is running. It provides:
+
+- **Real-time investigation simulation** — press a button to watch the 5-step agent protocol animate live, with terminal-style log output
+- **Task difficulty breakdown** — all 5 tasks with difficulty badges, score bars, and detailed descriptions
+- **6-component score explorer** — click any task to see its grader breakdown across correctness, confidence calibration, trajectory quality, feature utilization, reasoning consistency, and action ordering
+- **Step-by-step protocol visualization** — the full 5-action investigation protocol with reward annotations and animated step progression
+
+The dashboard uses no external frameworks — pure HTML, CSS, and vanilla JavaScript.
+
+---
+
+## 🧪 Test Suite
+
+### `test_env.py` — Environment Unit Tests
+
+Five targeted tests validating core environment behavior:
+
+| Test | What It Validates |
+|------|-------------------|
+| `test_reset_returns_observation` | `reset()` returns a valid `VoiceObservation` with step 0, correct task name, and hint |
+| `test_step_returns_reward_in_range` | Rewards from `step()` are always in [0.05, 0.95] — never exactly 0.0 or 1.0 |
+| `test_five_actions_complete_episode` | The full 5-action protocol (temporal → spectral → comparison → analyze → classify) completes an episode with `done=True` |
+| `test_reward_never_zero_or_one` | Explicit check that no step returns a boundary reward of exactly 0.0 or 1.0 |
+| `test_all_five_tasks_load` | All 5 task variants (`clean`, `compressed`, `adversarial`, `streaming`, `phonecall`) load successfully and return valid observations |
+
+Run: `pytest test_env.py -v`
+
+### `test_inference.py` — Inference Script Template
+
+A reference inference script following the **OpenEnv stdout format specification**. It demonstrates:
+
+- Required `[START]`, `[STEP]`, and `[END]` log line format
+- OpenAI client usage with `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` environment variables
+- Async environment interaction pattern (`reset()` → `step()` loop → `close()`)
+- Score normalization to [0, 1] range
+- Proper error handling with guaranteed `[END]` emission via `finally` block
+
+This template can be adapted for any OpenEnv-compatible environment.
 
 ---
 
