@@ -101,6 +101,7 @@ class VoiceAuthenticityEnv:
         self.revealed_features: Dict[str, Any] = {}
         self.step_rewards: List[float] = []
         self.evidence_accumulated: List[str] = []
+        self.np_random = np.random.default_rng(None)
 
         # Streaming task noise schedule (soft-gating)
         self._streaming_noise_schedule = {
@@ -127,7 +128,26 @@ class VoiceAuthenticityEnv:
             self.fake_centroid = np.full(self.features.shape[1], 0.05)
 
     def reset(self, seed: Optional[int] = None) -> VoiceObservation:
-        """Reset episode. Returns observation with NO features visible."""
+        """Reset episode state and select a new sample.
+
+        Randomized per episode:
+            - current_idx: which sample from the dataset is used (via RNG)
+            - All episode-tracking state is cleared (action history, revealed
+              features, step rewards, evidence)
+
+        NOT randomized (fixed per task):
+            - Feature data (features.npy, labels.npy) — loaded once at init
+            - Reference centroids (real_centroid, fake_centroid) — precomputed
+            - Difficulty level and task name — fixed by constructor
+            - Streaming noise schedule — deterministic per step number
+
+        Args:
+            seed: Optional RNG seed for reproducibility. If provided, the
+                  sample selection is deterministic for that seed.
+
+        Returns:
+            VoiceObservation with NO features visible (all zeroed to 0.05).
+        """
         self.step_number = 0
         self.done = False
         self.action_history = []
@@ -135,10 +155,9 @@ class VoiceAuthenticityEnv:
         self.step_rewards = []
         self.evidence_accumulated = []
         if seed is not None:
-            rng = np.random.default_rng(seed)
-            self.current_idx = int(rng.integers(0, len(self.labels)))
-        else:
-            self.current_idx = random.choice(self.indices)
+            self.np_random = np.random.default_rng(seed)
+            
+        self.current_idx = int(self.np_random.integers(0, len(self.labels)))
         return self._make_observation()
 
     def step(self, action: dict) -> tuple:
@@ -180,7 +199,9 @@ class VoiceAuthenticityEnv:
             obs, info = self._handle_analyze_evidence(action)
         elif action_type == ActionType.FINAL_CLASSIFY.value:
             obs, final_reward, info = self._handle_final_classify(action)
-            step_reward += final_reward
+            # Terminal action: reward is purely the grader score,
+            # not inflated by step-level shaping bonuses.
+            step_reward = final_reward
 
         self.step_rewards.append(step_reward)
 
@@ -451,7 +472,11 @@ class VoiceAuthenticityEnv:
     # ── Step-level reward computation ───────────────────────────────────
 
     def _compute_step_reward(self, action_type: str, action: dict) -> float:
-        """Compute shaping reward for this step."""
+        """Compute shaping reward for this step.
+
+        Returns a value in [0.02, 0.18] — never exactly 0.0 or 1.0.
+        The final clamp in step() further constrains to [0.05, 0.95].
+        """
         reward = 0.05
 
         gathering_actions = {
@@ -500,7 +525,8 @@ class VoiceAuthenticityEnv:
                 if not any(kw in reasoning for kw in ["not real", "not human", "not natural"]):
                     reward += PENALTY_CONTRADICTORY_REASONING
 
-        return reward
+        # Ensure shaping reward never produces exactly 0.0 or 1.0
+        return max(0.02, min(0.18, reward))
 
     # ── Streaming noise (soft-gating) ───────────────────────────────────
 

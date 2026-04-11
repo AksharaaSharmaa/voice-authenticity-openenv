@@ -24,7 +24,7 @@ API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 BENCHMARK = "voice-authenticity"
-SUCCESS_SCORE_THRESHOLD = 0.5
+SUCCESS_SCORE_THRESHOLD = 0.60
 
 # Environment server URL
 ENV_SERVER_URL = os.getenv("ENV_SERVER_URL", "http://localhost:7860")
@@ -82,11 +82,22 @@ def log_step(step, action, reward, done, error):
     )
 
 
-def log_end(success, steps, score, rewards):
+def log_end(success, steps, score, rewards, grader_breakdown=None):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    breakdown_str = ""
+    if grader_breakdown:
+        breakdown_str = (
+            f' grader_breakdown={{'
+            f'"correctness":{grader_breakdown.get("correctness", 0):.2f},'
+            f'"calibration":{grader_breakdown.get("confidence_calibration", 0):.2f},'
+            f'"trajectory":{grader_breakdown.get("trajectory_quality", 0):.2f},'
+            f'"utilization":{grader_breakdown.get("feature_utilization", 0):.2f},'
+            f'"reasoning":{grader_breakdown.get("reasoning_consistency", 0):.2f},'
+            f'"ordering":{grader_breakdown.get("action_ordering", 0):.2f}}}'
+        )
     print(
         f"[END] success={str(success).lower()} steps={steps} "
-        f"score={score:.2f} rewards={rewards_str}",
+        f"score={score:.2f} rewards={rewards_str}{breakdown_str}",
         flush=True,
     )
 
@@ -97,7 +108,7 @@ def env_reset(task_name: str) -> dict:
     """Call /reset on the environment server."""
     response = requests.post(
         f"{ENV_SERVER_URL}/reset",
-        json={"task_name": task_name, "seed": 42},
+        json={"task_name": task_name, "seed": 7},
         timeout=30,
     )
     response.raise_for_status()
@@ -180,6 +191,7 @@ async def run_task(client: OpenAI, task_name: str):
     success = False
     score = 0.0
     context = {}
+    grader_breakdown = None
 
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
 
@@ -276,6 +288,10 @@ async def run_task(client: OpenAI, task_name: str):
         steps_taken = 5
         done = step5.get("done", True)
 
+        # Capture grader breakdown from environment info
+        step5_info = step5.get("info", {})
+        grader_breakdown = step5_info.get("grader_breakdown", None)
+
         log_step(step=5, action=action5, reward=reward5,
                  done=done, error=None)
 
@@ -292,10 +308,11 @@ async def run_task(client: OpenAI, task_name: str):
             score = rewards[-1]
         else:
             score = 0.0
-            
+
         log_end(
             success=success, steps=steps_taken,
             score=score, rewards=rewards,
+            grader_breakdown=grader_breakdown,
         )
 async def main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
