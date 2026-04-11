@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+__pycache__
+*.pyc
+*.pyo
+uv.lock
+walkthrough.md
+validate.sh
+.dockerignore
