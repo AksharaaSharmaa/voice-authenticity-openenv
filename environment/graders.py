@@ -332,8 +332,10 @@ def grade(
     # Final safety: ensure score is strictly in (0, 1), never exactly 0.0 or 1.0
     if total <= 0.0:
         total = 0.01
-    if total >= 1.0:
+    elif total >= 1.0:
         total = 0.99
+    # Extra guard: ensure it's strictly within (0, 1) after rounding
+    total = max(0.01, min(0.99, total))
 
     # Collect penalties for transparency
     penalties = []

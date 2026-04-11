@@ -30,6 +30,11 @@ if HF_TOKEN is None:
 BENCHMARK = "voice-authenticity"
 SUCCESS_SCORE_THRESHOLD = 0.60
 
+
+def _clamp_score(value: float) -> float:
+    """Ensure score is strictly in (0, 1) — never 0.0 or 1.0."""
+    return max(0.01, min(0.99, value))
+
 # Environment server URL
 ENV_SERVER_URL = os.getenv("ENV_SERVER_URL", "http://localhost:7860")
 
@@ -176,7 +181,7 @@ async def run_task(client: OpenAI, task_name: str):
     rewards: List[float] = []
     steps_taken = 0
     success = False
-    score = 0.0
+    score = 0.01  # Default: strictly > 0 in case of error
     context = {}
     grader_breakdown = None
 
@@ -199,7 +204,7 @@ async def run_task(client: OpenAI, task_name: str):
         action1 = {"action_type": "request_temporal_features"}
         step1 = env_step(action1, task_name)
         observation = step1.get("observation", {})
-        reward1 = float(step1.get("reward", 0.0))
+        reward1 = _clamp_score(float(step1.get("reward", 0.05)))
         rewards.append(reward1)
         steps_taken = 1
         context["visible_features"] = observation.get("visible_features", {})
@@ -215,7 +220,7 @@ async def run_task(client: OpenAI, task_name: str):
         action2 = {"action_type": "request_spectral_features"}
         step2 = env_step(action2, task_name)
         observation = step2.get("observation", {})
-        reward2 = float(step2.get("reward", 0.0))
+        reward2 = _clamp_score(float(step2.get("reward", 0.05)))
         rewards.append(reward2)
         steps_taken = 2
         context["visible_features"] = observation.get("visible_features", {})
@@ -231,7 +236,7 @@ async def run_task(client: OpenAI, task_name: str):
         action3 = {"action_type": "request_comparison"}
         step3 = env_step(action3, task_name)
         observation = step3.get("observation", {})
-        reward3 = float(step3.get("reward", 0.0))
+        reward3 = _clamp_score(float(step3.get("reward", 0.05)))
         rewards.append(reward3)
         steps_taken = 3
         context["visible_features"] = observation.get("visible_features", {})
@@ -248,7 +253,7 @@ async def run_task(client: OpenAI, task_name: str):
         action4 = {"action_type": "analyze_evidence"}
         step4 = env_step(action4, task_name)
         observation = step4.get("observation", {})
-        reward4 = float(step4.get("reward", 0.0))
+        reward4 = _clamp_score(float(step4.get("reward", 0.05)))
         rewards.append(reward4)
         steps_taken = 4
         context["evidence_summary"] = observation.get("evidence_summary", "")
@@ -270,7 +275,7 @@ async def run_task(client: OpenAI, task_name: str):
         }
 
         step5 = env_step(action5, task_name)
-        reward5 = float(step5.get("reward", 0.0))
+        reward5 = _clamp_score(float(step5.get("reward", 0.05)))
         rewards.append(reward5)
         steps_taken = 5
         done = step5.get("done", True)

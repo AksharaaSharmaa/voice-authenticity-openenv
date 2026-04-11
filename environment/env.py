@@ -206,11 +206,7 @@ class VoiceAuthenticityEnv:
         self.step_rewards.append(step_reward)
 
         # Cap reward to strictly (0, 1) — never exactly 0.0 or 1.0
-        step_reward = max(0.05, min(0.95, step_reward))
-        if step_reward <= 0.0:
-            step_reward = 0.01
-        if step_reward >= 1.0:
-            step_reward = 0.99
+        step_reward = max(0.01, min(0.99, step_reward))
 
         # Check step limit
         if self.step_number >= MAX_STEPS and not self.done:
