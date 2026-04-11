@@ -106,7 +106,8 @@ def _score_confidence_calibration(
     if correct:
         if difficulty in ("easy", "medium"):
             # Reward higher confidence when correct on easier tasks
-            return 0.6 + 0.4 * confidence
+            raw = 0.6 + 0.35 * confidence  # max 0.95 at confidence=1.0
+            return max(0.05, min(0.95, raw))
         elif difficulty == "medium_hard":
             # Reward moderate confidence
             ideal = 0.75
@@ -327,6 +328,12 @@ def grade(
     total = total * scaling
 
     total = round(max(0.05, min(0.95, total)), 4)
+
+    # Final safety: ensure score is strictly in (0, 1), never exactly 0.0 or 1.0
+    if total <= 0.0:
+        total = 0.01
+    if total >= 1.0:
+        total = 0.99
 
     # Collect penalties for transparency
     penalties = []
