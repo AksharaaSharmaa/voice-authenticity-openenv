@@ -8,3 +8,8 @@ python-dotenv
 soundfile
 fastapi
 openenv-core>=0.2.0
+
+git add .
+git commit -m "v2 - web interface, health endpoint, full app.py"
+git push space master:main --force
+git push github master --force

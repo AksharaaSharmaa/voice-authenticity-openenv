@@ -220,7 +220,8 @@ def reset(request: dict = {}):
     if task not in envs:
         task = "clean_detection"
     current_task = task
-    obs = envs[current_task].reset()
+    seed = request.get("seed") if request else None
+    obs = envs[current_task].reset(seed=seed)
     return JSONResponse({
         "observation": obs.dict(),
         "done": False,

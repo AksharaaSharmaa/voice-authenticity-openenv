@@ -126,7 +126,7 @@ class VoiceAuthenticityEnv:
         else:
             self.fake_centroid = np.full(self.features.shape[1], 0.05)
 
-    def reset(self) -> VoiceObservation:
+    def reset(self, seed: Optional[int] = None) -> VoiceObservation:
         """Reset episode. Returns observation with NO features visible."""
         self.step_number = 0
         self.done = False
@@ -134,7 +134,11 @@ class VoiceAuthenticityEnv:
         self.revealed_features = {}
         self.step_rewards = []
         self.evidence_accumulated = []
-        self.current_idx = random.choice(self.indices)
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+            self.current_idx = int(rng.integers(0, len(self.labels)))
+        else:
+            self.current_idx = random.choice(self.indices)
         return self._make_observation()
 
     def step(self, action: dict) -> tuple:

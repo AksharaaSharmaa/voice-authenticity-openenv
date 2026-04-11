@@ -65,8 +65,18 @@ def log_start(task, env, model):
 
 def log_step(step, action, reward, done, error):
     error_val = error if error else "null"
+    if isinstance(action, dict):
+        action_type = action.get("action_type", "")
+        if action_type == "final_classify":
+            label = action.get("label", 0)
+            conf = action.get("confidence", 0.5)
+            action_str = f"final_classify label={label} confidence={conf:.2f}"
+        else:
+            action_str = action_type or str(action)
+    else:
+        action_str = str(action)
     print(
-        f"[STEP] step={step} action={json.dumps(action)} "
+        f"[STEP] step={step} action={action_str} "
         f"reward={reward:.2f} done={str(done).lower()} error={error_val}",
         flush=True,
     )
@@ -76,7 +86,7 @@ def log_end(success, steps, score, rewards):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
         f"[END] success={str(success).lower()} steps={steps} "
-        f"score={score:.3f} rewards={rewards_str}",
+        f"score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -87,7 +97,7 @@ def env_reset(task_name: str) -> dict:
     """Call /reset on the environment server."""
     response = requests.post(
         f"{ENV_SERVER_URL}/reset",
-        json={"task_name": task_name},
+        json={"task_name": task_name, "seed": 42},
         timeout=30,
     )
     response.raise_for_status()

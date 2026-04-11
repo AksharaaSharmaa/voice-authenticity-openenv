@@ -1,0 +1,272 @@
+# Complete Summary — Voice Authenticity OpenEnv Competition Journey
+
+---
+
+## The Beginning — Idea Selection
+
+You came with an original idea for a **Voice Authenticity Scoring Environment** for the Meta x HuggingFace OpenEnv competition. The competition required building a real-world RL environment where an AI agent learns through `step()`, `reset()`, `state()` API.
+
+After evaluating multiple approaches, the final decision was:
+- **Domain:** Synthetic/AI-generated voice detection
+- **Why:** Voice fraud is a documented real problem, novel domain, no other submission would do this
+- **Architecture:** Pre-extracted audio features served as observations, LLM agent classifies real vs synthetic
+
+---
+
+## Technical Architecture Built
+
+### The Core Idea
+```
+Real audio (LJSpeech) + Fake audio (ElevenLabs/Coqui)
+            ↓
+    Feature extraction (offline, once)
+            ↓
+    48-dimensional feature vector per clip
+            ↓
+    Environment serves vectors to LLM agent
+            ↓
+    Agent classifies: real(0) or synthetic(1) + confidence
+            ↓
+    Grader scores with partial reward signal
+```
+
+### The 48-Dimensional Feature Vector
+| Index | Feature | Why It Matters |
+|-------|---------|---------------|
+| 0-19 | MFCC means | Timbre/spectral shape |
+| 20-39 | MFCC std devs | Variation — fakes are too stable |
+| 40 | Zero crossing rate | Signal changes |
+| 41 | Spectral centroid | Brightness |
+| 42 | Jitter | Frequency instability — KEY discriminator |
+| 43 | Shimmer | Amplitude instability — KEY discriminator |
+| 44 | HNR | Harmonics-to-noise — fakes too clean |
+| 45-47 | Compression artifacts | For Task 2 |
+
+---
+
+## Dataset
+
+- **Source:** `garystafford/deepfake-audio-detection` on HuggingFace
+- **Size:** 250 real + 250 fake = 500 samples total
+- **Real:** Authentic human recordings
+- **Fake:** ElevenLabs, Hume AI, other TTS platforms
+- **Downloaded via:** `scripts/download_data.py`
+- **Features extracted via:** `scripts/extract_features.py`
+- **Saved as:** `features.npy`, `labels.npy` and task-specific variants
+
+---
+
+## The 3 Tasks
+
+### Task 1 — Clean Detection (Easy)
+- Clean, unmodified audio features
+- Binary reward: correct=0.95, wrong=0.05
+- Expected agent score: 0.7–1.0
+
+### Task 2 — Compressed Detection (Medium)
+- Same audio after codec compression simulation
+- Jitter/shimmer degraded, artifacts added
+- Partial reward based on confidence calibration
+- Expected agent score: 0.4–0.7
+
+### Task 3 — Adversarial Detection (Hard)
+- Synthetic audio engineered to mimic real speech
+- Fake samples have jitter/shimmer pushed into real range
+- Real samples pushed toward synthetic range
+- 8% label noise added for ambiguity
+- No clean threshold separates classes
+- Expected agent score: 0.3–0.6
+
+---
+
+## The Reward Function (Your Biggest Differentiator)
+
+```python
+def grade(true_label, action, difficulty):
+    correct = (label == true_label)
+    confidence = action["confidence"]
+
+    if difficulty == "easy":
+        return 0.95 if correct else 0.05
+
+    elif difficulty == "medium":
+        if correct:
+            return 0.6 + 0.35 * confidence   # max 0.95
+        else:
+            return max(0.05, 0.2 - 0.3 * confidence)
+
+    elif difficulty == "hard":
+        if correct:
+            base = 0.5
+            calibration_bonus = 0.45 * (1 - abs(confidence - 0.7))
+            return base + calibration_bonus
+        else:
+            return 0.15 if confidence < 0.4 else 0.05
+```
+
+**Why this is superior:** Confidence calibration. Wrong + uncertain = small penalty. Wrong + overconfident = heavy penalty. This teaches agents to express appropriate uncertainty — research-grade design.
+
+---
+
+## Files Built
+
+```
+voice-authenticity-openenv/
+├── environment/
+│   ├── __init__.py
+│   ├── env.py              # 2-phase step/reset/state
+│   ├── models.py           # Pydantic models
+│   ├── graders.py          # scoring logic
+│   └── data/               # .npy feature files
+├── scripts/
+│   ├── download_data.py
+│   └── extract_features.py
+├── server/app.py           # OpenEnv HTTP entry point
+├── app.py                  # FastAPI server
+├── inference.py            # LLM agent with HTTP calls
+├── openenv.yaml
+├── pyproject.toml
+├── Dockerfile
+├── requirements.txt
+├── README.md
+└── .env.example
+```
+
+---
+
+## Major Technical Milestones
+
+### 1. Got inference.py running locally
+First successful output with dummy data, then real data with meaningful rewards.
+
+### 2. Docker built successfully
+```
+docker build -t voice-authenticity .
+docker run --env-file .env voice-authenticity
+```
+Build time reduced to 8 seconds after caching.
+
+### 3. FastAPI server added
+`app.py` with `/reset`, `/step`, `/state`, `/health` endpoints so the validator could ping the Space via HTTP.
+
+### 4. HF Space deployed
+Pushed to `https://huggingface.co/spaces/AksharaSharma/voice-authenticity-openenv`
+
+### 5. Validation script passed — all 3/3 checks
+```
+✅ HF Space live and responds to /reset
+✅ Docker build succeeded
+✅ openenv validate passed
+```
+
+### 6. Submitted to competition
+
+### 7. Post-submission improvements
+- Removed explicit thresholds from README
+- Added failure cases section
+- Added 2-step interaction loop (analyze phase → decide phase)
+- Made adversarial task genuinely harder with overlapping distributions
+- Fixed inference.py to call HTTP endpoints instead of direct imports
+- Fixed score calculation to only count decision phase rewards
+
+### 8. Phase 2 validation failure — Emergency fix
+Competition emailed saying scores must be strictly between (0, 1) — not 0.0 or 1.0 exactly. Fixed grader to return 0.95/0.05 instead of 1.0/0.0.
+
+---
+
+## Problems Encountered and Fixed
+
+| Problem | Fix |
+|---------|-----|
+| PowerShell can't run Python commands | Use `python -c "..."` syntax |
+| Dummy data giving 0.00 rewards | Downloaded real dataset |
+| LLM always saying synthetic | Added raw feature values to hint |
+| JSON parse errors | Truncate at last `}`, increase max_tokens to 250 |
+| wav files blocked by HF push | Used `git filter-repo` to clean history |
+| `.env` token exposed in git | Revoked token, cleaned history |
+| Docker build failing on HF | Network issue, not code issue |
+| Global state race condition | Acceptable for sequential evaluation |
+| Score showing 0.5 for 2-step | Fixed to only count Step 2 reward |
+| Phase 2 validation failure | Fixed grader to strict (0, 1) range |
+
+---
+
+## The 2-Step Interaction Loop (Major Enhancement)
+
+Added after feedback that single-step classification looks too simple:
+
+**Step 1 — Analyze phase:**
+```json
+{"focus": ["jitter", "shimmer", "hnr"], "label": 0, "confidence": 0.5, "reasoning": "Requesting focused analysis"}
+```
+Returns reward=0.0, done=false
+
+**Step 2 — Decide phase:**
+```json
+{"label": 1, "confidence": 0.75, "reasoning": "Low jitter indicates synthetic"}
+```
+Returns actual reward, done=true
+
+This transforms the environment from static classification into a genuine agentic system with partial observability and action-dependent state transitions.
+
+---
+
+## Infrastructure
+
+- **HF Space:** `https://huggingface.co/spaces/AksharaSharma/voice-authenticity-openenv`
+- **GitHub:** `https://github.com/AksharaaSharmaa/voice-authenticity-openenv`
+- **LLM:** Qwen/Qwen2.5-72B-Instruct via HuggingFace router
+- **Server:** FastAPI + Uvicorn on port 7860
+- **Container:** Python 3.10-slim + praat + libsndfile1
+
+---
+
+## Baseline Scores (Final)
+
+| Task | Difficulty | Avg Reward | Success Rate |
+|------|-----------|------------|--------------|
+| clean_detection | Easy | 0.80 | 80% |
+| compressed_detection | Medium | 0.45 | 55% |
+| adversarial_detection | Hard | 0.50 | 50% |
+
+---
+
+## Pramanik AI — Startup Demo (Started)
+
+Parallel to the competition, started building Pramanik AI — a commercial voice authentication product.
+
+**3-Layer Architecture:**
+- Layer 1: Cryptographic watermark injection into verified audio
+- Layer 2: Detection engine (built — this is the competition submission)
+- Layer 3: Verification app checking watermark + authenticity
+
+**Demo built:**
+- FastAPI backend accepting audio uploads
+- librosa + parselmouth feature extraction in real-time
+- Qwen LLM analysis with plain-English explanations
+- Rate limiting: 3 requests per IP per day
+- 3 pages: Homepage, Demo, About
+- Black + teal design language
+- To be deployed on Render
+
+---
+
+## Current Status
+
+| Item | Status |
+|------|--------|
+| Competition submitted | ✅ |
+| Phase 1 validation | ✅ Passed |
+| Phase 2 validation | ❌ Failed — grader fix pushed |
+| Resubmission needed | ⚠️ Do this now |
+| Pramanik AI demo | 🔄 In progress |
+| Render deployment | ❌ Not done yet |
+
+---
+
+## What To Do Right Now
+
+1. **Resubmit to competition** with the grader fix
+2. **Test locally** that all rewards are strictly between 0 and 1
+3. **Run validator** one more time to confirm
+4. **Then finish Pramanik AI** — test `python main.py` in PRAMANIK folder and deploy to Render

@@ -14,9 +14,9 @@ tags:
   - audio
 ---
 
-# 🎙️ Voice Authenticity Detection — OpenEnv Environment
+# 🎙️ Voice Authenticity Detection : OpenEnv Environment
 
-Voice fraud now costs the global economy over **$25 billion annually**, devastating banking, insurance, telecom, and government services. AI-generated voices from platforms like ElevenLabs, Coqui, and Bark can clone any voice in under 60 seconds — enabling real-time phone scams, identity theft, and social engineering at unprecedented scale. Existing benchmarks like ASVspoof and ADD fail under real-world conditions: they operate on static datasets with fixed train/test splits, evaluate single-shot classifiers with no agent interaction, ignore partial observability (real systems never see all features at once), and provide binary pass/fail scoring with no reward shaping. This environment fills that gap. It trains agents to **actively gather, analyze, and reason about acoustic evidence** under realistic degradation — codec compression, adversarial perturbation, streaming noise, and phone call simulation — through a genuine multi-step decision process with 5 distinct actions, 6-component grading, and step-level reward shaping that teaches calibrated, risk-aware classification.
+Voice fraud now costs the global economy over **$25 billion annually**, devastating banking, insurance, telecom, and government services. AI-generated voices from platforms like ElevenLabs, Coqui, and Bark can clone any voice in under 60 seconds : enabling real-time phone scams, identity theft, and social engineering at unprecedented scale. Existing benchmarks like ASVspoof and ADD fail under real-world conditions: they operate on static datasets with fixed train/test splits, evaluate single-shot classifiers with no agent interaction, ignore partial observability (real systems never see all features at once), and provide binary pass/fail scoring with no reward shaping. This environment fills that gap. It trains agents to **actively gather, analyze, and reason about acoustic evidence** under realistic degradation : codec compression, adversarial perturbation, streaming noise, and phone call simulation : through a genuine multi-step decision process with 5 distinct actions, 6-component grading, and step-level reward shaping that teaches calibrated, risk-aware classification.
 
 ---
 
@@ -24,11 +24,11 @@ Voice fraud now costs the global economy over **$25 billion annually**, devastat
 
 AI-generated voices are increasingly weaponized for:
 
-- **Phone fraud & social engineering** — real-time voice cloning during live calls
-- **Deepfake audio in misinformation** — fabricated audio of public figures
-- **Identity spoofing** — bypassing voice biometric authentication systems
-- **Financial fraud** — CEO voice cloning for unauthorized wire transfers
-- **Insurance scams** — fabricated recorded statements
+- **Phone fraud & social engineering** : real-time voice cloning during live calls
+- **Deepfake audio in misinformation** : fabricated audio of public figures
+- **Identity spoofing** : bypassing voice biometric authentication systems
+- **Financial fraud** : CEO voice cloning for unauthorized wire transfers
+- **Insurance scams** : fabricated recorded statements
 
 This environment provides a structured benchmark for training agents to detect synthetic speech under conditions that static classifiers and existing benchmarks cannot handle.
 
@@ -56,15 +56,15 @@ The agent interacts through **5 distinct actions**, each returning genuinely dif
 | `request_spectral_features` | 20 MFCC means, 20 MFCC stds, ZCR, spectral centroid | Timbre and spectral shape |
 | `request_comparison` | Cosine similarity + euclidean distance to real/fake centroids | Statistical comparison to known references |
 | `analyze_evidence` | Structured synthesis of all gathered evidence with signal tally | Evidence integration and confidence calibration |
-| `final_classify` | Submits label (0=real, 1=synthetic) + confidence + reasoning | Terminal action — triggers 6-component grading |
+| `final_classify` | Submits label (0=real, 1=synthetic) + confidence + reasoning | Terminal action : triggers 6-component grading |
 
 ### Key Design Properties
 
-- **Partial observability** — features are zeroed until explicitly requested
-- **Action-dependent observations** — each action reveals genuinely different data
-- **Flexible ordering** — agent chooses its own investigation strategy
-- **Soft-gated streaming** — streaming task adds step-dependent noise (noisier early, cleaner late)
-- **Step-level rewards** — shaping signals throughout the episode, not just at the end
+- **Partial observability** : features are zeroed until explicitly requested
+- **Action-dependent observations** : each action reveals genuinely different data
+- **Flexible ordering** : agent chooses its own investigation strategy
+- **Soft-gated streaming** : streaming task adds step-dependent noise (noisier early, cleaner late)
+- **Step-level rewards** : shaping signals throughout the episode, not just at the end
 
 Episodes consist of **up to 6 steps** (5 investigation actions + buffer), not a single prediction.
 
@@ -74,7 +74,7 @@ Episodes consist of **up to 6 steps** (5 investigation actions + buffer), not a 
 
 - Fits within 2 vCPU / 8GB RAM constraints
 - Feature extraction is performed offline for fast inference
-- Enables **LLM-native reasoning over interpretable acoustic characteristics** — not possible with raw waveforms under current infrastructure constraints
+- Enables **LLM-native reasoning over interpretable acoustic characteristics** : not possible with raw waveforms under current infrastructure constraints
 - Avoids heavy signal processing during evaluation
 
 ---
@@ -123,9 +123,9 @@ class VoiceObservation(BaseModel):
 
 ### Key Discriminating Features
 
-- **Jitter**: measures cycle-to-cycle frequency instability — real voices show natural irregularity, synthetic voices are too stable
-- **Shimmer**: tracks amplitude variation between consecutive glottal pulses — real speech has organic variation
-- **HNR**: quantifies harmonic-to-noise ratio — synthetic voices are typically "too clean"
+- **Jitter**: measures cycle-to-cycle frequency instability : real voices show natural irregularity, synthetic voices are too stable
+- **Shimmer**: tracks amplitude variation between consecutive glottal pulses : real speech has organic variation
+- **HNR**: quantifies harmonic-to-noise ratio : synthetic voices are typically "too clean"
 
 ---
 
@@ -143,31 +143,31 @@ class VoiceAction(BaseModel):
 
 ## 🏆 Tasks (5 Total)
 
-### Task 1 — Clean Detection (Easy)
+### Task 1 : Clean Detection (Easy)
 
 - **Description**: Classify real vs synthetic speech from clean, unmodified audio features
 - **Difficulty**: Easy
 - **Expected agent score**: 0.7–0.95
 
-### Task 2 — Compressed Detection (Medium)
+### Task 2 : Compressed Detection (Medium)
 
 - **Description**: Classify speech after codec compression degradation. MFCC stds are flattened, jitter/shimmer are suppressed, spectral artifacts are added.
 - **Difficulty**: Medium
 - **Expected agent score**: 0.4–0.7
 
-### Task 3 — Adversarial Detection (Hard)
+### Task 3 : Adversarial Detection (Hard)
 
 - **Description**: Synthetic audio engineered to mimic real speech characteristics. Feature distributions overlap significantly with real speech. 8% label noise simulates real-world annotation ambiguity.
 - **Difficulty**: Hard
 - **Expected agent score**: 0.3–0.6
 
-### Task 4 — Streaming Detection (Medium-Hard)
+### Task 4 : Streaming Detection (Medium-Hard)
 
 - **Description**: Multi-step streaming scenario where features arrive with step-dependent noise. Earlier requests return noisier data; later requests return cleaner data. Agents are rewarded for intelligent sequencing without being forced into a fixed order (soft-gating).
 - **Difficulty**: Medium-Hard
 - **Expected agent score**: 0.3–0.6
 
-### Task 5 — Phone Call Detection (Extreme)
+### Task 5 : Phone Call Detection (Extreme)
 
 - **Description**: Simulates worst-case real-world conditions: heavy narrowband codec compression (300-3400Hz telephony simulation), additive background noise across all frequency bands, severe HNR degradation, MFCC high-frequency rolloff, and RMS energy fluctuation from packet loss. Designed to be near the limit of detectability.
 - **Difficulty**: Extreme
@@ -190,7 +190,7 @@ Each episode is scored across 6 components with difficulty-weighted contribution
 
 ### Why This Matters
 
-On easy tasks, correctness dominates. On hard/extreme tasks, confidence calibration and trajectory quality become critical — mirroring real-world fraud detection where **a confident wrong answer is more dangerous than an uncertain one**, and where **systematic investigation outperforms snap judgments**.
+On easy tasks, correctness dominates. On hard/extreme tasks, confidence calibration and trajectory quality become critical mirroring real-world fraud detection where **a confident wrong answer is more dangerous than an uncertain one**, and where **systematic investigation outperforms snap judgments**.
 
 ---
 
@@ -218,35 +218,35 @@ from environment.env import VoiceAuthenticityEnv
 
 env = VoiceAuthenticityEnv(task_name="clean_detection")
 
-# Reset — no features visible yet
+# Reset : no features visible yet
 obs = env.reset()
 # obs.features           → [0.05, 0.05, ..., 0.05] (zeroed)
 # obs.available_actions  → ["request_temporal_features", ...]
 
-# Step 1 — request temporal features
+# Step 1 : request temporal features
 action = {"action_type": "request_temporal_features"}
 obs, reward, done, info = env.step(action)
 # obs.visible_features["temporal"]["jitter"] → 0.032451
 # reward → 0.05 (shaping: first action is gathering)
 
-# Step 2 — request spectral features
+# Step 2 : request spectral features
 action = {"action_type": "request_spectral_features"}
 obs, reward, done, info = env.step(action)
 # obs.visible_features["spectral"]["mfcc_means"] → [20 values]
 # reward → 0.05 (shaping: multi-feature-type bonus)
 
-# Step 3 — compare to reference centroids
+# Step 3 : compare to reference centroids
 action = {"action_type": "request_comparison"}
 obs, reward, done, info = env.step(action)
 # obs.comparison_result["cosine_similarity_to_real"] → 0.8742
 # obs.comparison_result["closer_to"] → "real"
 
-# Step 4 — analyze all evidence
+# Step 4 : analyze all evidence
 action = {"action_type": "analyze_evidence"}
 obs, reward, done, info = env.step(action)
 # obs.evidence_summary → "Evidence analysis (3 sources): ..."
 
-# Step 5 — final classification
+# Step 5 : final classification
 action = {
     "action_type": "final_classify",
     "label": 0,
@@ -277,7 +277,7 @@ Runs: 10 independent episodes per task
 | streaming_detection | Medium-Hard | 0.40 | 45% | Soft-gated noise reduces early accuracy |
 | phonecall_detection | Extreme | 0.30 | 35% | Near detection limit under phone conditions |
 
-Scores vary per run due to random sample selection. Higher rewards on harder tasks reflect confidence calibration — agents that express appropriate uncertainty score better than overconfident wrong answers.
+Scores vary per run due to random sample selection. Higher rewards on harder tasks reflect confidence calibration : agents that express appropriate uncertainty score better than overconfident wrong answers.
 
 ---
 
@@ -285,9 +285,9 @@ Scores vary per run due to random sample selection. Higher rewards on harder tas
 
 - Synthetic voices with injected background noise may evade temporal feature detection
 - Real voices under heavy studio compression can mimic synthetic spectral profiles
-- Borderline acoustic feature overlap exists between real and adversarially crafted samples — no clean threshold separates them
+- Borderline acoustic feature overlap exists between real and adversarially crafted samples : no clean threshold separates them
 - Phone call simulation pushes detection to near-chance performance, reflecting genuine real-world difficulty
-- Streaming task noise is step-dependent — agents that don't re-request features may work from degraded data
+- Streaming task noise is step-dependent : agents that don't re-request features may work from degraded data
 - Dataset of 500 samples is designed for evaluation structure and reward design, not production scale
 - Results may vary across accents, languages, and recording conditions not represented in the data
 
@@ -317,10 +317,10 @@ python scripts/extract_features.py
 cp .env.example .env
 # Edit .env with your HF_TOKEN
 
-# Terminal 1 — start the environment server
+# Terminal 1 : start the environment server
 python app.py
 
-# Terminal 2 — run baseline inference (5-action protocol, all 5 tasks)
+# Terminal 2 : run baseline inference (5-action protocol, all 5 tasks)
 python inference.py
 ```
 
@@ -391,13 +391,13 @@ Audio (.wav / .flac)
 ```
 
 ### Compression Simulation (Task 2)
-Codec compression is simulated by degrading MFCC standard deviations, reducing jitter and shimmer values, and adding spectral artifact signals — replicating the acoustic degradation introduced by MP3/codec pipelines.
+Codec compression is simulated by degrading MFCC standard deviations, reducing jitter and shimmer values, and adding spectral artifact signals : replicating the acoustic degradation introduced by MP3/codec pipelines.
 
 ### Adversarial Simulation (Task 3)
 Adversarial perturbation shifts synthetic sample features into the real speech distribution range, and real sample features toward the synthetic range. Controlled label noise (8%) simulates real-world annotation ambiguity. No clean threshold separates the classes.
 
 ### Streaming Simulation (Task 4)
-Features undergo two layers of degradation: a static perturbation (partial MFCC decode, mild temporal noise) baked into the data files, and a dynamic soft-gated noise applied at runtime that reduces as the agent takes more steps. Early requests return noisier data; later requests return cleaner data — rewarding intelligent sequencing without forcing a fixed order.
+Features undergo two layers of degradation: a static perturbation (partial MFCC decode, mild temporal noise) baked into the data files, and a dynamic soft-gated noise applied at runtime that reduces as the agent takes more steps. Early requests return noisier data; later requests return cleaner data : rewarding intelligent sequencing without forcing a fixed order.
 
 ### Phone Call Simulation (Task 5)
 The most aggressive degradation: narrowband codec compression zeros out high-order MFCCs, flattens MFCC temporal variation, injects broadband Gaussian noise, severely degrades HNR, and adds RMS energy fluctuation simulating packet loss. Designed to be near the limit of what's detectable.
