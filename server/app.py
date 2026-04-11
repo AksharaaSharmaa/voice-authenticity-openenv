@@ -71,7 +71,7 @@ def reset(request: dict = {}):
     return JSONResponse({
         "observation": obs.dict(),
         "done": False,
-        "reward": 0.01,
+        "reward": 0.05,
         "info": {}
     })
 

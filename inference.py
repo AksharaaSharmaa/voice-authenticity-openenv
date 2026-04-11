@@ -33,7 +33,7 @@ SUCCESS_SCORE_THRESHOLD = 0.60
 
 def _clamp_score(value: float) -> float:
     """Ensure score is strictly in (0, 1) — never 0.0 or 1.0."""
-    return max(0.01, min(0.99, value))
+    return max(0.05, min(0.95, value))
 
 # Environment server URL
 ENV_SERVER_URL = os.getenv("ENV_SERVER_URL", "http://localhost:7860")
@@ -86,6 +86,9 @@ def log_step(step, action, reward, done, error):
 
 
 def log_end(success, steps, rewards):
+    # Ensure rewards is never empty to avoid parsing issues
+    if not rewards:
+        rewards = [0.05]
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
         f"[END] success={str(success).lower()} steps={steps} "
@@ -181,7 +184,7 @@ async def run_task(client: OpenAI, task_name: str):
     rewards: List[float] = []
     steps_taken = 0
     success = False
-    score = 0.01  # Default: strictly > 0 in case of error
+    score = 0.05  # Default: strictly > 0 in case of error
     context = {}
     grader_breakdown = None
 
