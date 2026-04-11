@@ -85,14 +85,14 @@ def log_step(step, action, reward, done, error):
     )
 
 
-def log_end(success, steps, rewards):
-    # Ensure rewards is never empty to avoid parsing issues
+def log_end(success, steps, score, rewards):
     if not rewards:
         rewards = [0.05]
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    score = max(0.05, min(0.95, float(score)))
     print(
         f"[END] success={str(success).lower()} steps={steps} "
-        f"rewards={rewards_str}",
+        f"score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -299,7 +299,9 @@ async def run_task(client: OpenAI, task_name: str):
 
     finally:
         log_end(
-            success=success, steps=steps_taken,
+            success=success,
+            steps=steps_taken,
+            score=score,
             rewards=rewards,
         )
 async def main():
