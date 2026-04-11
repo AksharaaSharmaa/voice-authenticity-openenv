@@ -462,13 +462,41 @@ This template can be adapted for any OpenEnv-compatible environment.
 ## 🔬 Technical Pipeline
 
 ### Feature Extraction
-```
-Audio (.wav / .flac)
-    ↓ librosa → MFCC + spectral features
-    ↓ parselmouth/Praat → jitter, shimmer, HNR
-    ↓ z-score normalization
-    ↓ 48-dim float32 vector
-    → stored as .npy arrays (5 variants)
+
+```mermaid
+flowchart TD
+    A["🎤 Raw Audio\n(.wav / .flac)"] --> B["librosa"]
+    A --> C["parselmouth / Praat"]
+
+    B --> D["MFCC Means (20)\nMFCC Stds (20)\nZCR · Spectral Centroid\nBandwidth · Rolloff · RMS"]
+    C --> E["Jitter · Shimmer · HNR"]
+
+    D --> F["Concatenate → 48-dim raw vector"]
+    E --> F
+
+    F --> G["Z-Score Normalization\n(per-feature mean/std)"]
+
+    G --> H["float32 feature vector (48-dim)"]
+
+    H --> I["Clean\nfeatures.npy"]
+    H --> J["Compressed\nfeatures_compressed.npy"]
+    H --> K["Adversarial\nfeatures_adversarial.npy"]
+    H --> L["Streaming\nfeatures_streaming.npy"]
+    H --> M["Phone Call\nfeatures_phonecall.npy"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#0f3460,stroke:#e94560,color:#fff
+    style C fill:#0f3460,stroke:#e94560,color:#fff
+    style D fill:#16213e,stroke:#0f3460,color:#e0e0e0
+    style E fill:#16213e,stroke:#0f3460,color:#e0e0e0
+    style F fill:#1a1a2e,stroke:#e94560,color:#fff
+    style G fill:#1a1a2e,stroke:#e94560,color:#fff
+    style H fill:#e94560,stroke:#e94560,color:#fff
+    style I fill:#0d2d1e,stroke:#14b8a6,color:#ccfbf1
+    style J fill:#1a1a00,stroke:#fbbf24,color:#fef3c7
+    style K fill:#1a0000,stroke:#f87171,color:#fecaca
+    style L fill:#0d1a2d,stroke:#fb923c,color:#fed7aa
+    style M fill:#1a0010,stroke:#d946ef,color:#f5d0fe
 ```
 
 ### Compression Simulation (Task 2)
