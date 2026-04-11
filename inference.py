@@ -20,9 +20,13 @@ import requests
 from typing import List
 from openai import OpenAI
 
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
+
 BENCHMARK = "voice-authenticity"
 SUCCESS_SCORE_THRESHOLD = 0.60
 
@@ -66,40 +70,21 @@ def log_start(task, env, model):
 def log_step(step, action, reward, done, error):
     error_val = error if error else "null"
     if isinstance(action, dict):
-        action_type = action.get("action_type", "")
-        if action_type == "final_classify":
-            action_json = json.dumps({
-                "action_type": "final_classify",
-                "label": action.get("label", 0),
-                "confidence": round(action.get("confidence", 0.5), 2)
-            })
-        else:
-            action_json = json.dumps({"action_type": action_type})
+        action_str = action.get("action_type", "unknown")
     else:
-        action_json = json.dumps({"action_type": str(action)})
+        action_str = str(action)
     print(
-        f"[STEP] step={step} action={action_json} "
+        f"[STEP] step={step} action={action_str} "
         f"reward={reward:.2f} done={str(done).lower()} error={error_val}",
         flush=True,
     )
 
 
-def log_end(success, steps, score, rewards, grader_breakdown=None):
+def log_end(success, steps, rewards):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    breakdown_str = ""
-    if grader_breakdown:
-        breakdown_str = (
-            f' grader_breakdown={{'
-            f'"correctness":{grader_breakdown.get("correctness", 0):.2f},'
-            f'"calibration":{grader_breakdown.get("confidence_calibration", 0):.2f},'
-            f'"trajectory":{grader_breakdown.get("trajectory_quality", 0):.2f},'
-            f'"utilization":{grader_breakdown.get("feature_utilization", 0):.2f},'
-            f'"reasoning":{grader_breakdown.get("reasoning_consistency", 0):.2f},'
-            f'"ordering":{grader_breakdown.get("action_ordering", 0):.2f}}}'
-        )
     print(
         f"[END] success={str(success).lower()} steps={steps} "
-        f"score={score:.2f} rewards={rewards_str}{breakdown_str}",
+        f"rewards={rewards_str}",
         flush=True,
     )
 
@@ -305,19 +290,12 @@ async def run_task(client: OpenAI, task_name: str):
         print(f"[DEBUG] Task error: {e}", flush=True)
 
     finally:
-        # The competition judges score based on the final classify reward only
-        if rewards:
-            score = rewards[-1]
-        else:
-            score = 0.0
-
         log_end(
             success=success, steps=steps_taken,
-            score=score, rewards=rewards,
-            grader_breakdown=grader_breakdown,
+            rewards=rewards,
         )
 async def main():
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     tasks = [
         "clean_detection",
         "compressed_detection",

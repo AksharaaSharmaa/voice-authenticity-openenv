@@ -405,7 +405,6 @@ voice-authenticity-openenv/
 ├── app.py                  # FastAPI server (serves Dashboard.html + API)
 ├── inference.py            # baseline LLM agent (5-action protocol)
 ├── test_env.py             # environment unit tests (5 tests)
-├── test_inference.py       # inference script template (OpenEnv format)
 ├── openenv.yaml            # OpenEnv spec (5 tasks)
 ├── pyproject.toml          # package config
 ├── Dockerfile
@@ -443,18 +442,6 @@ Five targeted tests validating core environment behavior:
 | `test_all_five_tasks_load` | All 5 task variants (`clean`, `compressed`, `adversarial`, `streaming`, `phonecall`) load successfully and return valid observations |
 
 Run: `pytest test_env.py -v`
-
-### `test_inference.py` — Inference Script Template
-
-A reference inference script following the **OpenEnv stdout format specification**. It demonstrates:
-
-- Required `[START]`, `[STEP]`, and `[END]` log line format
-- OpenAI client usage with `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN` environment variables
-- Async environment interaction pattern (`reset()` → `step()` loop → `close()`)
-- Score normalization to [0, 1] range
-- Proper error handling with guaranteed `[END]` emission via `finally` block
-
-This template can be adapted for any OpenEnv-compatible environment.
 
 ---
 
