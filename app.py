@@ -22,6 +22,7 @@ TASKS = [
     "adversarial_detection",
     "streaming_detection",
     "phonecall_detection",
+    "realtime_detection",  # this is missing
 ]
 
 envs = {task: VoiceAuthenticityEnv(task) for task in TASKS}
