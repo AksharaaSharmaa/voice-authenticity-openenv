@@ -13,258 +13,231 @@ tags:
   - audio
 ---
 
-# 🎙️ Voice Authenticity Detection — OpenEnv Environment
+# 🎙️ Voice Authenticity Detection
 
-**Voice fraud cost the global economy $25B+ in 2024.** Tools like ElevenLabs can clone any voice in 60 seconds. Banks, insurers, and telecom providers face real-time phone scams, identity spoofing, and deepfake audio at unprecedented scale — and existing benchmarks can't keep up.
+## What Is This?
 
-This environment trains agents to **actively investigate, gather evidence, and reason about acoustic features** under realistic degradation — codec compression, adversarial perturbation, streaming noise, and phone call simulation — through a genuine multi-step decision process with calibrated, risk-aware grading.
+Fake voices are a huge problem. Tools like ElevenLabs can copy anyone's voice in under a minute. Scammers use these cloned voices to steal money, trick people over the phone, and spread false information. This cost the world over $25 billion in 2024 alone.
 
-### The 5-Action Agent Protocol
+This project is a training ground for AI agents that learn to tell the difference between **real human voices** and **AI-generated fake voices**.
 
-| Step | Action | What the Agent Gets | Purpose |
-|------|--------|-------------------|---------|
-| 1 | `request_temporal_features` | Jitter, shimmer, HNR (raw + normalized) | Vocal cord irregularity markers |
-| 2 | `request_spectral_features` | 20 MFCC means, 20 MFCC stds, ZCR, spectral centroid | Timbre and spectral shape |
-| 3 | `request_comparison` | Cosine similarity + euclidean distance to real/fake centroids | Statistical comparison to known references |
-| 4 | `analyze_evidence` | Structured synthesis of all gathered evidence with signal tally | Evidence integration and confidence calibration |
-| 5 | `final_classify` | Submits label (0=real, 1=synthetic) + confidence + reasoning | Terminal action — triggers 6-component grading |
+But here is the key part: the agent does not just get all the data at once and make a guess. Instead, it has to **investigate step by step**, like a detective. It starts with zero information and has to decide what clues to look for, put them together, and then make a judgment call.
 
-The agent starts with **zero features visible** and must earn its information before classifying. This is sequential decision-making under partial observability — not a single-shot classifier.
+## How Does the Agent Work?
 
----
+The agent follows a simple investigation process. Think of it like a detective solving a case:
 
-## 🚫 Why Existing Benchmarks Fail Here
+| Step | What the Agent Does | What It Gets Back | Why This Helps |
+|------|-------------------|------------------|---------------|
+| 1 | Ask for voice stability clues | Jitter, shimmer, HNR (how shaky or smooth the voice is) | Real voices have natural wobbles. Fake voices are too perfect. |
+| 2 | Ask for sound shape clues | 20 MFCC values, zero crossing rate, spectral centroid | These describe the "texture" and "color" of the voice. |
+| 3 | Compare to known examples | How similar this voice is to known real and fake voices | Like comparing a signature to ones you have on file. |
+| 4 | Think about all the clues | A summary of everything gathered so far, with a recommendation | The agent puts the puzzle together before deciding. |
+| 5 | Make a final decision | Submits: real or fake, how confident it is, and why | This is where the agent gets scored. |
 
-**ASVspoof** (Automatic Speaker Verification Spoofing) evaluates countermeasure systems using static datasets with fixed train/test splits. Agents see the full feature set at once, make a single prediction, and receive binary pass/fail scoring. There is no partial observability, no multi-step interaction, no confidence calibration, and no reward shaping. ASVspoof cannot evaluate whether an agent knows *how* to investigate — only whether it gets the right answer.
-
-**ADD** (Audio Deepfake Detection) benchmarks follow the same static paradigm: models are trained on one distribution and tested on another, with no mechanism for the agent to actively gather information or express calibrated uncertainty. ADD evaluates classifiers, not agents.
-
-**This environment is different.** It requires agents to:
-- **Choose which features to request** and in what order (partial observability)
-- **Synthesize heterogeneous evidence sources** before committing to a classification
-- **Express calibrated confidence** — overconfident wrong answers are penalized more harshly than uncertain wrong answers
-- **Operate under real-world degradation** — codec compression, adversarial perturbation, streaming noise, and phone-call simulation
-- **Follow logical investigation trajectories** — gather → analyze → classify, scored by a 6-component grader
-
-No existing benchmark evaluates these capabilities.
+The agent starts with **nothing visible**. It has to earn its information before it can decide. This is what makes it different from a regular classifier that sees everything at once.
 
 ---
 
-## 🌍 Real-World Motivation
+## 🚫 Why Other Tests Fall Short
 
-AI-generated voices are increasingly weaponized for:
+Other voice detection tests (like ASVspoof and ADD) work like this: give the AI all the data, let it make one guess, and check if it is right or wrong. That is it.
 
-- **Phone fraud & social engineering** — real-time voice cloning during live calls
-- **Deepfake audio in misinformation** — fabricated audio of public figures
-- **Identity spoofing** — bypassing voice biometric authentication systems
-- **Financial fraud** — CEO voice cloning for unauthorized wire transfers
-- **Insurance scams** — fabricated recorded statements
+That approach cannot test:
+- Whether the AI knows **which clues to look for**
+- Whether the AI can **put different types of evidence together**
+- Whether the AI is **honest about how confident it is** (saying "I'm not sure" when it really is not sure)
+- Whether the AI can handle **messy real-world audio** like phone calls and streaming
 
-This environment provides a structured benchmark for training agents to detect synthetic speech under conditions that static classifiers and existing benchmarks cannot handle.
-
----
-
-## 🏗️ Environment Overview
-
-The environment serves 48-dimensional feature vectors extracted from audio samples. Unlike standard classification benchmarks, agents **start with NO features visible** and must actively query the environment through the 5-action protocol to gather evidence before making a final classification.
-
-This creates genuine **sequential decision-making under partial observability**, requiring agents to:
-- Choose which information to request and in what order
-- Synthesize heterogeneous evidence sources
-- Express calibrated confidence reflecting genuine uncertainty
-- Follow logical investigation trajectories
+This environment tests all of those things.
 
 ---
 
-## 🏆 Tasks (5 Total) — Monotonic Difficulty Progression
+## 🌍 Why This Matters in the Real World
 
-| Task | Difficulty | Expected Score | Description |
-|------|-----------|---------------|-------------|
-| `clean_detection` | Easy | 0.65–0.78 | Clean, unmodified audio features — clear signal separation |
-| `compressed_detection` | Medium | 0.50–0.65 | Codec compression flattens MFCC stds, suppresses jitter/shimmer |
-| `adversarial_detection` | Hard | 0.40–0.58 | Feature distributions overlap — no clean threshold separates classes |
-| `streaming_detection` | Medium-Hard | 0.38–0.55 | Step-dependent noise soft-gating — earlier steps noisier, later cleaner |
-| `phonecall_detection` | Extreme | 0.25–0.42 | Heavy narrowband codec + background noise — near detection limit |
+AI-generated voices are being used for:
 
-### Difficulty Progression Design
+- **Phone scams**: cloning someone's voice during a live call
+- **Fake audio clips**: putting false words in a public figure's mouth
+- **Identity theft**: tricking voice-based security systems (like bank phone lines)
+- **CEO fraud**: cloning a boss's voice to trick employees into sending money
+- **Insurance fraud**: creating fake recorded statements
 
-Harder tasks apply **difficulty-aware score scaling** in the grader. This models genuine signal degradation: adversarial samples have overlapping feature distributions, phone call codec compression destroys discriminative features, and streaming noise makes early observations unreliable. Even a perfect agent achieves lower scores on harder tasks because the underlying signal quality is genuinely worse.
+This project gives AI agents a way to practice catching these fakes under realistic conditions.
 
 ---
 
-## 🏅 Grading System (6 Components)
+## 🏗️ How the Environment Works
 
-Each episode is scored across 6 components with difficulty-weighted contributions:
+The environment gives the agent a set of 48 numbers (features) extracted from an audio clip. But the agent cannot see them right away. It has to request them step by step, building up its picture before making a decision.
 
-| Component | What It Measures | Easy | Medium | Hard | Extreme |
-|-----------|-----------------|------|--------|------|---------|
-| **Correctness** | Label matches ground truth | 0.40 | 0.30 | 0.25 | 0.20 |
-| **Confidence Calibration** | Penalizes overconfidence, rewards calibrated uncertainty | 0.15 | 0.20 | 0.25 | 0.25 |
-| **Trajectory Quality** | Did agent gather → analyze → classify? | 0.10 | 0.15 | 0.18 | 0.20 |
-| **Feature Utilization** | Did agent request temporal AND spectral features? | 0.15 | 0.15 | 0.12 | 0.15 |
-| **Reasoning Consistency** | Does reasoning text match chosen label? | 0.10 | 0.10 | 0.10 | 0.10 |
-| **Action Ordering** | Logical sequence: gather → analyze → classify | 0.10 | 0.10 | 0.10 | 0.10 |
-
-After component scoring, a **difficulty scaling factor** is applied:
-
-| Difficulty | Scaling Factor | Max Achievable Score |
-|-----------|---------------|---------------------|
-| Easy | 0.78 | ~0.73 |
-| Medium | 0.66 | ~0.61 |
-| Hard | 0.59 | ~0.55 |
-| Medium-Hard | 0.55 | ~0.51 |
-| Extreme | 0.41 | ~0.38 |
-
-### Why This Matters
-
-On easy tasks, correctness dominates. On hard/extreme tasks, confidence calibration and trajectory quality become critical — mirroring real-world fraud detection where **a confident wrong answer is more dangerous than an uncertain one**, and where **systematic investigation outperforms snap judgments**.
+This creates a real decision-making challenge where the agent must:
+- Choose what information to ask for and in what order
+- Combine different types of clues
+- Be honest about how certain (or uncertain) it is
+- Follow a logical investigation path
 
 ---
 
-## 🎁 Step-Level Rewards
+## 🏆 The 6 Tasks
 
-The environment provides shaping signals at every step, not just on final classification:
+There are 6 tasks, each getting harder. The first five tasks test whether an agent can read a signal correctly. The sixth tests whether it knows when it has read enough. The harder tasks usually have messier audio, which makes fake voices harder to detect.
 
-| Condition | Reward |
-|-----------|--------|
-| First action is a feature request | +0.05 |
-| Requested both temporal AND spectral features | +0.05 |
-| Used `analyze_evidence` before `final_classify` | +0.05 |
-| Jumped straight to `final_classify` without gathering | -0.10 |
-| Repeated the same action consecutively | -0.05 |
-| Reasoning contradicts chosen label | -0.10 |
+| Task | How Hard | Expected Score | What Makes It Different |
+|------|----------|---------------|----------------------|
+| `clean_detection` | Easy | 0.65 to 0.78 | Clean, clear audio. The clues are easy to spot. |
+| `compressed_detection` | Medium | 0.50 to 0.65 | Audio has been compressed (like an MP3). Some details get lost. |
+| `adversarial_detection` | Hard | 0.40 to 0.58 | The fake voices have been tweaked to look more like real ones. Very tricky. |
+| `streaming_detection` | Medium-Hard | 0.38 to 0.55 | Early clues are noisy and unreliable. Later clues get cleaner. |
+| `phonecall_detection` | Extreme | 0.25 to 0.42 | Simulates a real phone call with bad audio quality and background noise. |
+| `realtime_detection` | Realtime | 0.50 to 0.68 | The agent can decide early, but every extra step costs points. Tests speed vs accuracy. |
 
-Step-level rewards are clamped to [0.02, 0.18] and never produce exactly 0.0 or 1.0. The terminal `final_classify` step returns the pure grader score.
+### Why Harder Tasks Get Lower Scores
 
-These intermediate rewards teach agents **investigation behavior** rather than pure classification.
+This is on purpose. Harder tasks have genuinely worse audio quality, which means even a perfect agent will score lower. The scoring system accounts for this, so a score of 0.35 on the phone call task might actually be impressive, while 0.60 on the clean task would be average.
+
+### The Realtime Detection Task (New!)
+
+This task changes the rules. Instead of following a fixed 5-step sequence, the agent can make its final decision **at any point after step 2**.
+
+But there is a catch: **every extra step costs 0.03 points** off the final score.
+
+Here is how it works:
+- The agent MUST take at least 2 steps to gather evidence (steps 1 and 2)
+- After that, the agent can classify whenever it wants
+- Step 3 costs 0.03, step 4 costs 0.06, step 5 costs 0.09, and so on
+- A smart agent will classify as soon as it feels confident enough, instead of always going through every single step
+
+This tests a completely different skill: **knowing when to stop investigating**. Some agents will jump to conclusions too early and get the wrong answer. Others will keep gathering evidence they do not need and lose points to the time penalty. The best agents find the sweet spot.
+
+This task is not harder because the audio is bad. It uses the same clean audio data as the easy task. The challenge is purely about decision timing and choosing the right moment to stop. No extra data or computing power is needed.
 
 ---
 
-## ⚙️ Why Feature Vectors Instead of Raw Audio?
+## 🏅 How Scoring Works (6 Parts)
 
-- Fits within 2 vCPU / 8GB RAM constraints
-- Feature extraction is performed offline for fast inference
-- Enables **LLM-native reasoning over interpretable acoustic characteristics** — not possible with raw waveforms under current infrastructure constraints
-- Avoids heavy signal processing during evaluation
+Every episode is scored across 6 different areas. The weight of each area changes depending on how hard the task is.
+
+| What Gets Scored | What It Means | Easy | Medium | Hard | Extreme | Realtime |
+|-----------------|--------------|------|--------|------|---------|----------|
+| **Correctness** | Did the agent get the right answer? | 0.40 | 0.30 | 0.25 | 0.20 | 0.35 |
+| **Confidence** | Was the agent honest about its certainty? | 0.15 | 0.20 | 0.25 | 0.25 | 0.20 |
+| **Investigation Quality** | Did the agent gather, analyze, then classify? | 0.10 | 0.15 | 0.18 | 0.20 | 0.10 |
+| **Feature Use** | Did the agent request enough types of clues? | 0.15 | 0.15 | 0.12 | 0.15 | 0.15 |
+| **Reasoning** | Does the explanation match the answer? | 0.10 | 0.10 | 0.10 | 0.10 | 0.10 |
+| **Action Order** | Did the agent follow a logical sequence? | 0.10 | 0.10 | 0.10 | 0.10 | 0.10 |
+
+After scoring, a **difficulty multiplier** is applied:
+
+| Difficulty | Multiplier | Best Possible Score |
+|-----------|-----------|-------------------|
+| Easy | 0.78 | about 0.73 |
+| Medium | 0.66 | about 0.61 |
+| Hard | 0.59 | about 0.55 |
+| Medium-Hard | 0.55 | about 0.51 |
+| Extreme | 0.41 | about 0.38 |
+| Realtime | 0.72 | about 0.68 (before time penalty) |
+
+### Why This Scoring System Matters
+
+On easy tasks, getting the right answer matters most. On hard tasks, being honest about uncertainty and following a good investigation process become just as important. This mirrors real life: in fraud detection, a confident wrong answer is more dangerous than an uncertain one, and rushing to judgment without proper investigation is a liability.
+
+For the realtime task, the time penalty is applied ON TOP of the difficulty multiplier. So the effective max score drops by 0.03 for every extra step beyond step 2.
+
+---
+
+## 🎁 Rewards During Investigation
+
+The agent gets small rewards (and penalties) during the investigation, not just at the end:
+
+| What Happened | Points |
+|--------------|--------|
+| First action is gathering evidence | +0.05 |
+| Asked for both voice stability AND sound shape clues | +0.05 |
+| Analyzed evidence before making a decision | +0.05 |
+| Jumped straight to a decision without gathering anything | -0.10 |
+| Repeated the exact same action twice in a row | -0.05 |
+| Explanation contradicts the chosen answer | -0.10 |
+
+These small rewards teach the agent good investigation habits, not just correct answers.
+
+---
+
+## What Are the 48 Features?
+
+Each audio clip is described by 48 numbers:
+
+| Numbers | What They Measure | Simple Explanation |
+|---------|------------------|-------------------|
+| 1 to 20 | MFCC averages | The overall "shape" and "color" of the voice |
+| 21 to 40 | MFCC variation | How much the voice texture changes over time |
+| 41 | Zero crossing rate | How often the sound wave crosses the zero line |
+| 42 | Spectral centroid | How "bright" or "dark" the voice sounds |
+| 43 | Jitter | How wobbly the voice pitch is (real voices wobble more) |
+| 44 | Shimmer | How much the loudness changes beat to beat |
+| 45 | HNR | How "clean" vs "noisy" the voice is (fakes are too clean) |
+| 46 to 48 | Compression clues | Spectral bandwidth, rolloff, and energy level |
+
+### The Three Most Important Clues
+
+- **Jitter**: Real voices have natural pitch wobbles. Fake voices are too steady.
+- **Shimmer**: Real voices have natural loudness changes. Fake voices are too uniform.
+- **HNR**: Real voices have some noise in them. Fake voices are unnaturally clean.
+
+---
+
+## Why Use Numbers Instead of Raw Audio?
+
+- The competition has strict limits: 2 CPUs and 8GB of memory
+- Processing raw audio files would be too slow and heavy
+- Numbers let the AI agent reason about voice characteristics using language (something it is good at)
+- Feature extraction is done once ahead of time, so evaluation is fast
 
 ---
 
 ## 📊 Dataset
 
-- Real speech: 250 samples from `garystafford/deepfake-audio-detection` (authentic human recordings)
-- Synthetic speech: 250 samples (ElevenLabs, Hume AI, and other TTS platforms)
-- Total: 500 labeled samples across 5 task variants
+- 250 real speech samples from human recordings
+- 250 synthetic speech samples from AI voice generators (ElevenLabs, Hume AI, and others)
+- 500 total samples across 6 task versions
 
-The dataset is designed for **evaluation structure and reward learning**, not scale. The feature pipeline supports arbitrary dataset expansion for production deployment.
-
----
-
-## 📐 Observation Space
-
-Each observation contains:
-
-```python
-class VoiceObservation(BaseModel):
-    features: List[float]                          # 48-dim (zeroed until revealed)
-    task_name: str                                 # current task
-    step_number: int                               # current step in episode
-    difficulty: str                                # easy|medium|medium_hard|hard|extreme
-    sample_id: int                                 # index into dataset
-    hint: Optional[str]                            # context and guidance
-    visible_features: Dict[str, Any]               # features revealed so far
-    evidence_summary: Optional[str]                # from analyze_evidence
-    comparison_result: Optional[Dict[str, float]]  # from request_comparison
-    available_actions: List[str]                    # valid actions this step
-    actions_taken: List[str]                        # action history
-```
-
-### 48-Dimensional Feature Vector
-
-| Index | Feature | Description |
-|-------|---------|-------------|
-| 0–19 | MFCC means | Timbre and spectral shape of the voice |
-| 20–39 | MFCC std devs | Temporal variation in spectral characteristics |
-| 40 | Zero crossing rate | Signal sign changes per frame |
-| 41 | Spectral centroid | Brightness of the sound |
-| 42 | Jitter | Cycle-to-cycle frequency instability |
-| 43 | Shimmer | Amplitude variation between glottal pulses |
-| 44 | HNR | Ratio of harmonic energy to background noise |
-| 45–47 | Compression artifacts | Spectral bandwidth, rolloff, RMS energy |
-
-### Key Discriminating Features
-
-- **Jitter**: measures cycle-to-cycle frequency instability — real voices show natural irregularity, synthetic voices are too stable
-- **Shimmer**: tracks amplitude variation between consecutive glottal pulses — real speech has organic variation
-- **HNR**: quantifies harmonic-to-noise ratio — synthetic voices are typically "too clean"
+The dataset is designed to test the evaluation and scoring system, not to be huge. The same pipeline can handle much larger datasets for real-world use.
 
 ---
 
-## 🎯 Action Space
-
-```python
-class VoiceAction(BaseModel):
-    action_type: str   # one of the 5 actions
-    label: int         # 0=real, 1=synthetic (for final_classify)
-    confidence: float  # [0.05, 0.95] (for final_classify)
-    reasoning: str     # explanation (for final_classify)
-```
-
----
-
-## 📊 Baseline Scores
-
-Agent: `Qwen/Qwen2.5-72B-Instruct` via HuggingFace router
-Protocol: 5-action (temporal → spectral → comparison → analyze → classify)
-Runs: 1 episode per task, seed=7
-
-| Task | Difficulty | Score | Success | Notes |
-|------|-----------|-------|---------|-------|
-| clean_detection | Easy | 0.74 | Yes | Clean features — strong baseline |
-| compressed_detection | Medium | 0.62 | Yes | Codec compression degrades acoustic signal |
-| adversarial_detection | Hard | 0.55 | No | Overlapping distributions challenge classification |
-| streaming_detection | Medium-Hard | 0.30 | No | Streaming noise fooled the LLM at step 1 |
-| phonecall_detection | Extreme | 0.22 | No | Phone-call degradation pushed detection below chance |
-
-Scores decrease monotonically with difficulty — harder tasks have genuinely noisier signals and overlapping feature distributions. The difficulty scaling is applied in the grader, meaning even a perfect agent scores lower on harder tasks. On streaming and phone-call tasks, the LLM was additionally fooled by degraded features, creating sharper score drops.
-
----
-
-## 🔌 OpenEnv API
+## 🔌 How to Use the Code
 
 ```python
 from environment.env import VoiceAuthenticityEnv
 
 env = VoiceAuthenticityEnv(task_name="clean_detection")
 
-# Reset — no features visible yet
+# Start a new episode (the agent sees nothing yet)
 obs = env.reset(seed=42)
-# obs.features           → [0.05, 0.05, ..., 0.05] (zeroed)
-# obs.available_actions  → ["request_temporal_features", ...]
+# obs.features           = [0.05, 0.05, ..., 0.05] (all hidden)
+# obs.available_actions  = ["request_temporal_features", ...]
 
-# Step 1 — request temporal features
+# Step 1: ask for voice stability clues
 action = {"action_type": "request_temporal_features"}
 obs, reward, done, info = env.step(action)
-# obs.visible_features["temporal"]["jitter"] → 0.032451
-# reward → 0.10 (shaping: first action is gathering)
+# obs.visible_features["temporal"]["jitter"] = 0.032451
 
-# Step 2 — request spectral features
+# Step 2: ask for sound shape clues
 action = {"action_type": "request_spectral_features"}
 obs, reward, done, info = env.step(action)
-# obs.visible_features["spectral"]["mfcc_means"] → [20 values]
-# reward → 0.10 (shaping: multi-feature-type bonus)
+# obs.visible_features["spectral"]["mfcc_means"] = [20 values]
 
-# Step 3 — compare to reference centroids
+# Step 3: compare to known examples
 action = {"action_type": "request_comparison"}
 obs, reward, done, info = env.step(action)
-# obs.comparison_result["cosine_similarity_to_real"] → 0.8742
-# obs.comparison_result["closer_to"] → "real"
+# obs.comparison_result["closer_to"] = "real"
 
-# Step 4 — analyze all evidence
+# Step 4: analyze all the evidence
 action = {"action_type": "analyze_evidence"}
 obs, reward, done, info = env.step(action)
-# obs.evidence_summary → "Evidence analysis (3 sources): ..."
+# obs.evidence_summary = "Evidence analysis (3 sources): ..."
 
-# Step 5 — final classification
+# Step 5: make the final call
 action = {
     "action_type": "final_classify",
     "label": 0,
@@ -272,16 +245,45 @@ action = {
     "reasoning": "High jitter and shimmer indicate natural vocal cord variation..."
 }
 obs, reward, done, info = env.step(action)
-# reward → 0.73 (6-component graded score with difficulty scaling)
-# done → True
-# info["grader_breakdown"] → {correctness: 0.95, calibration: 0.84, ...}
+# reward = 0.73 (the final graded score)
+# done = True (episode over)
 
 state = env.state()
 ```
 
+### Realtime Detection Example
+
+```python
+env = VoiceAuthenticityEnv(task_name="realtime_detection")
+obs = env.reset(seed=42)
+
+# Step 1: gather temporal features
+obs, reward, done, info = env.step({"action_type": "request_temporal_features"})
+# final_classify is NOT available yet (need at least 2 steps first)
+
+# Step 2: gather spectral features
+obs, reward, done, info = env.step({"action_type": "request_spectral_features"})
+# final_classify is NOW available
+# The hint tells you: "You can classify now"
+
+# Step 3: classify right away (only 1 extra step = -0.03 penalty)
+obs, reward, done, info = env.step({
+    "action_type": "final_classify",
+    "label": 0,
+    "confidence": 0.80,
+    "reasoning": "Jitter and shimmer patterns suggest real speech"
+})
+# reward = grader_score - 0.03 time penalty
+# info["realtime_time_penalty"] = 0.03
+# info["realtime_extra_steps"] = 1
+
+# If you had taken 2 more steps before classifying:
+# penalty would be 0.09 (3 extra steps x 0.03)
+```
+
 ---
 
-## 📋 Expected stdout Format
+## 📋 Log Output Format
 
 ```
 [START] task=clean_detection env=voice-authenticity model=Qwen/Qwen2.5-72B-Instruct
@@ -290,35 +292,54 @@ state = env.state()
 [STEP] step=3 action=request_comparison reward=0.05 done=false error=null
 [STEP] step=4 action=analyze_evidence reward=0.05 done=false error=null
 [STEP] step=5 action=final_classify label=0 confidence=0.75 reward=0.74 done=true error=null
-[END] success=true steps=5 score=0.74 rewards=0.10,0.10,0.05,0.05,0.74 grader_breakdown={"correctness":0.95,"calibration":0.90,"trajectory":0.95,"utilization":0.95,"reasoning":0.95,"ordering":0.95}
+[END] success=true steps=5 score=0.74 rewards=0.10,0.10,0.05,0.05,0.74
 ```
 
 ---
 
-## ⚠️ Known Limitations and Failure Cases
+## 📊 Baseline Scores
 
-- Synthetic voices with injected background noise may evade temporal feature detection
-- Real voices under heavy studio compression can mimic synthetic spectral profiles
-- Borderline acoustic feature overlap exists between real and adversarially crafted samples — no clean threshold separates them
-- Phone call simulation pushes detection to near-chance performance, reflecting genuine real-world difficulty
-- Streaming task noise is step-dependent — agents that don't re-request features may work from degraded data
-- Dataset of 500 samples is designed for evaluation structure and reward design, not production scale
-- Results may vary across accents, languages, and recording conditions not represented in the data
+Agent: `Qwen/Qwen2.5-72B-Instruct` via HuggingFace router
+Protocol: 5-action sequence for standard tasks, 3-step quick classify for realtime
+Runs: 1 episode per task, seed=7
 
-This environment is designed to be extended with real enterprise datasets. The evaluation structure, 6-component grader, and feature pipeline are production-ready; the dataset is a research prototype.
+| Task | How Hard | Score | Passed? | Notes |
+|------|----------|-------|---------|-------|
+| clean_detection | Easy | 0.74 | Yes | Clean audio, easy to detect |
+| compressed_detection | Medium | 0.62 | Yes | Compression hides some clues |
+| adversarial_detection | Hard | 0.55 | No | Fake voices designed to fool detection |
+| streaming_detection | Medium-Hard | 0.30 | No | Noisy early data fooled the model |
+| phonecall_detection | Extreme | 0.22 | No | Phone audio too degraded for reliable detection |
+| realtime_detection | Realtime | TBD | TBD | Quick classify with minimal time penalty |
+
+Scores go down as tasks get harder. This is by design. Harder tasks have genuinely worse audio quality, so even a perfect agent scores lower.
 
 ---
 
-## 🚀 Setup and Usage
+## Known Problems and Limitations
 
-### Requirements
+- Fake voices with added background noise can dodge the stability checks
+- Real voices recorded in a professional studio can look like fake voices
+- On the hardest tasks, real and fake voices look almost identical in the data
+- Phone call audio is so degraded that detection is close to random guessing
+- The streaming task adds noise to early steps, so agents that do not adapt get fooled
+- 500 samples is enough for testing the system, but not for production use
+- Results may differ for voices in different languages or accents
+
+The scoring system and investigation pipeline are ready for real-world use. The dataset is a research prototype that can be replaced with larger enterprise data.
+
+---
+
+## 🚀 Getting Started
+
+### What You Need
 ```
-Python 3.10+
+Python 3.10 or newer
 Docker
-HuggingFace account
+A HuggingFace account
 ```
 
-### Local Setup
+### Setting Up Locally
 ```bash
 git clone https://huggingface.co/spaces/AksharaSharma/voice-authenticity-openenv
 cd voice-authenticity-openenv
@@ -329,44 +350,23 @@ python scripts/download_data.py
 python scripts/extract_features.py
 
 cp .env.example .env
-# Edit .env with your HF_TOKEN
+# Open .env and add your HF_TOKEN
 
-# Terminal 1 — start the environment server
+# In one terminal, start the server:
 python app.py
 
-# Terminal 2 — run baseline inference (5-action protocol, all 5 tasks)
+# In another terminal, run the agent:
 python inference.py
 ```
 
-### Validation Sequence
+### Testing
 ```bash
-docker build -t voice-authenticity .
-docker run --env-file .env voice-authenticity &
-sleep 10
-curl http://localhost:7860/health
-curl -X POST http://localhost:7860/reset
-python inference.py
-```
-
-### Running Tests
-```bash
-# Run all tests
+# Run all 7 tests
 pytest test_env.py -v
 
-# Run individual tests
-pytest test_env.py::test_reset_returns_observation -v
-pytest test_env.py::test_five_actions_complete_episode -v
+# Run one specific test
+pytest test_env.py::test_realtime_classify_after_step_2 -v
 ```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_BASE_URL` | LLM API endpoint | `https://router.huggingface.co/v1` |
-| `MODEL_NAME` | Model identifier | `Qwen/Qwen2.5-72B-Instruct` |
-| `HF_TOKEN` | HuggingFace API token | required |
-| `VOICE_TASK` | Task to run | `clean_detection` |
-| `ENV_SERVER_URL` | Environment server URL | `http://localhost:7860` |
 
 ### Docker
 ```bash
@@ -374,39 +374,50 @@ docker build -t voice-authenticity .
 docker run --env-file .env voice-authenticity
 ```
 
+### Settings
+
+| Setting | What It Does | Default |
+|---------|-------------|---------|
+| `API_BASE_URL` | Where to find the AI model | `https://router.huggingface.co/v1` |
+| `MODEL_NAME` | Which AI model to use | `Qwen/Qwen2.5-72B-Instruct` |
+| `HF_TOKEN` | Your HuggingFace login token | (required) |
+| `VOICE_TASK` | Which task to run | `clean_detection` |
+| `ENV_SERVER_URL` | Where the environment server is running | `http://localhost:7860` |
+
 ---
 
-## 📁 Project Structure
+## 📁 Project Files
+
 ```
 voice-authenticity-openenv/
 ├── environment/
 │   ├── __init__.py
-│   ├── env.py              # 5-action step/reset/state with partial observability
-│   ├── models.py           # Pydantic Observation/Action/Reward models
-│   ├── graders.py          # 6-component scoring with difficulty weights + scaling
+│   ├── env.py              # The main environment with all 6 tasks
+│   ├── models.py           # Data models for observations, actions, and rewards
+│   ├── graders.py          # 6-part scoring system with difficulty adjustments
 │   └── data/
-│       ├── features.npy            # clean features (500 × 48)
-│       ├── features_compressed.npy # codec-degraded features
-│       ├── features_adversarial.npy# adversarially perturbed features
-│       ├── features_streaming.npy  # streaming degraded features
-│       ├── features_phonecall.npy  # phone call degraded features
-│       ├── features_raw.npy        # unnormalized values
-│       ├── labels.npy              # ground truth labels
+│       ├── features.npy            # Clean features (500 x 48)
+│       ├── features_compressed.npy # Compressed audio features
+│       ├── features_adversarial.npy# Tricky adversarial features
+│       ├── features_streaming.npy  # Streaming audio features
+│       ├── features_phonecall.npy  # Phone call audio features
+│       ├── features_raw.npy        # Original unnormalized values
+│       ├── labels.npy              # Correct answers (used by clean + realtime)
 │       ├── labels_compressed.npy
 │       ├── labels_adversarial.npy
 │       ├── labels_streaming.npy
 │       └── labels_phonecall.npy
 ├── scripts/
-│   ├── download_data.py    # fetch dataset from HuggingFace
-│   └── extract_features.py # audio → feature vectors (5 tasks)
+│   ├── download_data.py    # Downloads the audio dataset
+│   └── extract_features.py # Turns audio files into feature numbers
 ├── server/
-│   └── app.py              # OpenEnv HTTP server entry point
-├── Dashboard.html          # interactive web dashboard (served at / and /web)
-├── app.py                  # FastAPI server (serves Dashboard.html + API)
-├── inference.py            # baseline LLM agent (5-action protocol)
-├── test_env.py             # environment unit tests (5 tests)
-├── openenv.yaml            # OpenEnv spec (5 tasks)
-├── pyproject.toml          # package config
+│   └── app.py              # Server entry point
+├── Dashboard.html          # Interactive web dashboard
+├── app.py                  # FastAPI server (serves the dashboard and API)
+├── inference.py            # The AI agent that runs all 6 tasks
+├── test_env.py             # 7 tests to make sure everything works
+├── openenv.yaml            # Environment specification (6 tasks)
+├── pyproject.toml          # Project settings
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
@@ -416,53 +427,51 @@ voice-authenticity-openenv/
 
 ## 🖥️ Web Dashboard
 
-`Dashboard.html` is a self-contained, interactive web interface served at both `/` and `/web` when the server is running. It provides:
+`Dashboard.html` is a standalone web page that shows the environment in action. When the server is running, visit `/` or `/web` to see:
 
-- **Real-time investigation simulation** — press a button to watch the 5-step agent protocol animate live, with terminal-style log output
-- **Task difficulty breakdown** — all 5 tasks with difficulty badges, score bars, and detailed descriptions
-- **6-component score explorer** — click any task to see its grader breakdown across correctness, confidence calibration, trajectory quality, feature utilization, reasoning consistency, and action ordering
-- **Step-by-step protocol visualization** — the full 5-action investigation protocol with reward annotations and animated step progression
+- **Live Investigation Simulation**: watch the agent go through its investigation steps in real time
+- **Task Difficulty Overview**: all 6 tasks with their difficulty levels and expected scores
+- **Score Breakdown**: click any task to see exactly how it was scored across all 6 components
+- **Step by Step Walkthrough**: the full investigation process with reward information at each step
 
-The dashboard uses no external frameworks — pure HTML, CSS, and vanilla JavaScript.
+The dashboard uses no external tools or libraries. It is pure HTML, CSS, and JavaScript.
 
 ---
 
 ## 🧪 Test Suite
 
-### `test_env.py` — Environment Unit Tests
+7 tests that check everything works correctly:
 
-Five targeted tests validating core environment behavior:
+| Test Name | What It Checks |
+|-----------|---------------|
+| `test_reset_returns_observation` | Starting a new episode gives back proper initial data |
+| `test_step_returns_reward_in_range` | Rewards are always between 0.05 and 0.95 |
+| `test_five_actions_complete_episode` | The full 5-step investigation finishes properly |
+| `test_reward_never_zero_or_one` | No reward is ever exactly 0.0 or exactly 1.0 |
+| `test_all_tasks_load` | All 6 tasks start up correctly |
+| `test_realtime_classify_after_step_2` | Realtime task allows early classification after step 2 with time penalty |
+| `test_realtime_no_penalty_at_step_2` | Verifies the time penalty math is correct |
 
-| Test | What It Validates |
-|------|-------------------|
-| `test_reset_returns_observation` | `reset()` returns a valid `VoiceObservation` with step 0, correct task name, and hint |
-| `test_step_returns_reward_in_range` | Rewards from `step()` are always in [0.05, 0.95] — never exactly 0.0 or 1.0 |
-| `test_five_actions_complete_episode` | The full 5-action protocol (temporal → spectral → comparison → analyze → classify) completes an episode with `done=True` |
-| `test_reward_never_zero_or_one` | Explicit check that no step returns a boundary reward of exactly 0.0 or 1.0 |
-| `test_all_five_tasks_load` | All 5 task variants (`clean`, `compressed`, `adversarial`, `streaming`, `phonecall`) load successfully and return valid observations |
-
-Run: `pytest test_env.py -v`
+Run them with: `pytest test_env.py -v`
 
 ---
 
-## 🔬 Technical Pipeline
-
-### Feature Extraction
+## 🔬 How the Audio Processing Works
 
 ```mermaid
 flowchart TD
-    A["🎤 Raw Audio\n(.wav / .flac)"] --> B["librosa"]
+    A["🎤 Raw Audio Files"] --> B["librosa"]
     A --> C["parselmouth / Praat"]
 
-    B --> D["MFCC Means (20)\nMFCC Stds (20)\nZCR · Spectral Centroid\nBandwidth · Rolloff · RMS"]
-    C --> E["Jitter · Shimmer · HNR"]
+    B --> D["MFCC Averages (20)\nMFCC Variation (20)\nZero Crossing Rate\nSpectral Centroid\nBandwidth, Rolloff, RMS"]
+    C --> E["Jitter, Shimmer, HNR"]
 
-    D --> F["Concatenate → 48-dim raw vector"]
+    D --> F["Combine into 48 numbers"]
     E --> F
 
-    F --> G["Z-Score Normalization\n(per-feature mean/std)"]
+    F --> G["Normalize the values"]
 
-    G --> H["float32 feature vector (48-dim)"]
+    G --> H["Final 48-number feature vector"]
 
     H --> I["Clean\nfeatures.npy"]
     H --> J["Compressed\nfeatures_compressed.npy"]
@@ -485,17 +494,20 @@ flowchart TD
     style M fill:#1a0010,stroke:#d946ef,color:#f5d0fe
 ```
 
-### Compression Simulation (Task 2)
-Codec compression is simulated by degrading MFCC standard deviations, reducing jitter and shimmer values, and adding spectral artifact signals — replicating the acoustic degradation introduced by MP3/codec pipelines.
+### Task 2: Compressed Audio
+Audio compression (like MP3 encoding) squashes variation in the MFCC values and reduces the jitter and shimmer signals. This makes it harder to tell real from fake because some of the key differences get smoothed out.
 
-### Adversarial Simulation (Task 3)
-Adversarial perturbation shifts synthetic sample features into the real speech distribution range, and real sample features toward the synthetic range. Controlled label noise (8%) simulates real-world annotation ambiguity. No clean threshold separates the classes.
+### Task 3: Adversarial Audio
+The fake voices have been carefully tweaked so their numbers fall right in the same range as real voices. And 8% of the labels are intentionally wrong, simulating the kind of disagreement you see in real-world data. No simple threshold can separate real from fake.
 
-### Streaming Simulation (Task 4)
-Features undergo two layers of degradation: a static perturbation (partial MFCC decode, mild temporal noise) baked into the data files, and a dynamic soft-gated noise applied at runtime that reduces as the agent takes more steps. Early requests return noisier data; later requests return cleaner data — rewarding intelligent sequencing without forcing a fixed order.
+### Task 4: Streaming Audio
+Two layers of audio degradation are applied. First, the saved features are slightly damaged. Second, the environment adds extra noise at runtime that gets weaker as the agent takes more steps. Early readings are unreliable, later ones are cleaner. Smart agents learn to account for this.
 
-### Phone Call Simulation (Task 5)
-The most aggressive degradation: narrowband codec compression zeros out high-order MFCCs, flattens MFCC temporal variation, injects broadband Gaussian noise, severely degrades HNR, and adds RMS energy fluctuation simulating packet loss. Designed to be near the limit of what's detectable.
+### Task 5: Phone Call Audio
+The most aggressive degradation. High-frequency MFCC values are zeroed out (simulating narrowband phone codecs), variation is flattened, random noise is injected, HNR is severely damaged, and energy levels fluctuate (simulating packet loss). This pushes detection to the edge of what is possible.
+
+### Task 6: Realtime Detection
+Uses the same clean audio as Task 1, but changes the decision structure. The agent does not follow a fixed protocol. Instead, it has to decide: "Do I have enough evidence, or should I keep investigating?" Every extra step costs 0.03 points. This task does not have bad signal quality. It is entirely a test of decision timing and efficient investigation. No extra data or processing needed.
 
 ---
 

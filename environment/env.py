@@ -1,5 +1,5 @@
 """
-Voice Authenticity Detection Environment — 5-action multi-step agent loop.
+Voice Authenticity Detection Environment — multi-step agent loop.
 
 Actions:
     request_temporal_features  — reveals jitter, shimmer, HNR
@@ -12,6 +12,13 @@ Partial observability: the agent starts with NO features visible and must
 actively query the environment to build its picture before classifying.
 
 Step-level rewards provide shaping signals throughout the episode.
+
+Realtime detection task:
+    The agent can call final_classify at any point after step 2.
+    Each additional step beyond step 2 applies a -0.03 time cost to the
+    final score. This rewards agents that reach correct confident
+    conclusions efficiently, and penalizes both premature classification
+    AND unnecessary evidence gathering.
 """
 
 import numpy as np
@@ -27,6 +34,7 @@ TASKS = [
     "adversarial_detection",
     "streaming_detection",
     "phonecall_detection",
+    "realtime_detection",
 ]
 
 DIFFICULTY_MAP = {
@@ -35,6 +43,7 @@ DIFFICULTY_MAP = {
     "adversarial_detection": "hard",
     "streaming_detection":   "medium_hard",
     "phonecall_detection":   "extreme",
+    "realtime_detection":    "realtime",
 }
 
 DATA_FILES = {
@@ -58,9 +67,17 @@ DATA_FILES = {
         "environment/data/features_phonecall.npy",
         "environment/data/labels_phonecall.npy",
     ),
+    "realtime_detection": (
+        "environment/data/features.npy",
+        "environment/data/labels.npy",
+    ),
 }
 
 MAX_STEPS = 6  # 5 actions + 1 buffer
+
+# Realtime detection: time penalty per extra step beyond step 2
+REALTIME_MIN_STEPS_BEFORE_CLASSIFY = 2
+REALTIME_TIME_PENALTY_PER_STEP = 0.03
 
 # ── Step-level reward constants ─────────────────────────────────────────
 
@@ -181,6 +198,16 @@ class VoiceAuthenticityEnv:
                 f"Unknown action_type: {action_type}. Valid: {valid_actions}"
             )
 
+        # Realtime detection: block final_classify before minimum steps
+        if (self.task_name == "realtime_detection"
+                and action_type == ActionType.FINAL_CLASSIFY.value
+                and self.step_number < REALTIME_MIN_STEPS_BEFORE_CLASSIFY):
+            raise ValueError(
+                f"realtime_detection: final_classify requires at least "
+                f"{REALTIME_MIN_STEPS_BEFORE_CLASSIFY} steps first. "
+                f"Current step: {self.step_number}."
+            )
+
         # Track action
         self.action_history.append(action_type)
         self.step_number += 1
@@ -214,7 +241,7 @@ class VoiceAuthenticityEnv:
             self.done = True
             info["message"] = "Max steps reached. Episode ended."
 
-        return obs, round(step_reward, 4), self.done, info
+        return obs, round(float(step_reward), 2), self.done, info
 
     def state(self) -> dict:
         """Return full environment state for debugging."""
@@ -435,7 +462,13 @@ class VoiceAuthenticityEnv:
         return obs, info
 
     def _handle_final_classify(self, action: dict) -> tuple:
-        """Submit final classification. Triggers grading. Episode ends."""
+        """Submit final classification. Triggers grading. Episode ends.
+
+        For realtime_detection task:
+            The agent can classify at any step after step 2.
+            Each extra step beyond step 2 costs -0.03 on the final score.
+            This rewards quick, confident, correct decisions.
+        """
         from environment.graders import grade
 
         true_label = int(self.labels[self.current_idx])
@@ -446,6 +479,15 @@ class VoiceAuthenticityEnv:
             difficulty=self.difficulty,
             action_history=self.action_history,
         )
+
+        final_score = result["score"]
+
+        # Apply realtime time penalty: -0.03 per step beyond step 2
+        time_penalty = 0.0
+        if self.task_name == "realtime_detection":
+            extra_steps = max(0, self.step_number - REALTIME_MIN_STEPS_BEFORE_CLASSIFY)
+            time_penalty = extra_steps * REALTIME_TIME_PENALTY_PER_STEP
+            final_score = max(0.05, min(0.95, final_score - time_penalty))
 
         self.done = True
 
@@ -464,11 +506,21 @@ class VoiceAuthenticityEnv:
             "episode_summary": {
                 "actions_taken": self.action_history,
                 "features_revealed": list(self.revealed_features.keys()),
-                "total_steps": self.step_number
-            }
+                "total_steps": self.step_number,
+            },
         }
 
-        return obs, result["score"], info
+        # Add realtime-specific info
+        if self.task_name == "realtime_detection":
+            info["realtime_time_penalty"] = round(time_penalty, 4)
+            info["realtime_extra_steps"] = max(0, self.step_number - REALTIME_MIN_STEPS_BEFORE_CLASSIFY)
+            if time_penalty > 0:
+                result["penalties"].append(
+                    f"Realtime time penalty: -{time_penalty:.2f} "
+                    f"({info['realtime_extra_steps']} extra steps beyond step 2)"
+                )
+
+        return obs, final_score, info
 
     # ── Step-level reward computation ───────────────────────────────────
 
@@ -627,9 +679,16 @@ class VoiceAuthenticityEnv:
             if self.difficulty in ("hard", "extreme"):
                 hint += " Warning: this is a challenging task. Gather thorough evidence and calibrate your confidence carefully."
             if self.task_name == "streaming_detection":
-                hint += " Note: this is a streaming scenario — earlier feature requests may contain noise that reduces over time."
+                hint += " Note: this is a streaming scenario. Earlier feature requests may contain noise that reduces over time."
             if self.task_name == "phonecall_detection":
                 hint += " Note: this is a phone call scenario with heavy codec compression and background noise."
+            if self.task_name == "realtime_detection":
+                hint += (
+                    " Note: this is a realtime detection scenario. "
+                    "You can classify at any point after step 2, but every "
+                    "extra step costs -0.03 on your final score. "
+                    "Classify as soon as you feel confident enough."
+                )
             return hint
 
         parts = [
@@ -644,20 +703,41 @@ class VoiceAuthenticityEnv:
 
         remaining = MAX_STEPS - self.step_number
         if remaining <= 2:
-            parts.append(f"⚠️ Only {remaining} steps remaining — consider classifying soon.")
+            parts.append(f"Warning: Only {remaining} steps remaining. Consider classifying soon.")
+
+        # Realtime-specific: remind about time cost
+        if self.task_name == "realtime_detection" and self.step_number >= REALTIME_MIN_STEPS_BEFORE_CLASSIFY:
+            extra = self.step_number - REALTIME_MIN_STEPS_BEFORE_CLASSIFY
+            penalty_so_far = extra * REALTIME_TIME_PENALTY_PER_STEP
+            parts.append(
+                f"Realtime penalty so far: -{penalty_so_far:.2f} "
+                f"({extra} steps beyond step 2). You can classify now."
+            )
 
         return " ".join(parts)
 
     def _get_available_actions(self) -> List[str]:
-        """Return list of actions the agent can still take."""
+        """Return list of actions the agent can still take.
+
+        For realtime_detection:
+            final_classify is only available after step 2 (at least 2
+            evidence-gathering actions must be taken first).
+            Before step 2, final_classify is NOT in the available list.
+        """
         if self.done:
             return []
 
         available = []
         for at in ActionType:
-            # final_classify is always available
+            # For realtime_detection, final_classify is only available
+            # after the agent has taken at least 2 steps.
             if at == ActionType.FINAL_CLASSIFY:
-                available.append(at.value)
+                if self.task_name == "realtime_detection":
+                    if self.step_number >= REALTIME_MIN_STEPS_BEFORE_CLASSIFY:
+                        available.append(at.value)
+                else:
+                    # For all other tasks: final_classify is always available
+                    available.append(at.value)
                 continue
             # Don't allow repeating the exact same action consecutively
             # (but allow re-requesting after other actions)

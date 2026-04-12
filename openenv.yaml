@@ -24,6 +24,9 @@ tasks:
   - name: phonecall_detection
     difficulty: extreme
     description: "Phone call simulation with heavy codec compression and narrowband degradation"
+  - name: realtime_detection
+    difficulty: realtime
+    description: "Classify at any point after step 2 with time penalty for extra steps. Tests knowing when to stop investigating."
 observation_space:
   type: object
   properties:

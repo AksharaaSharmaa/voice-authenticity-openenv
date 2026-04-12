@@ -59,6 +59,14 @@ COMPONENT_WEIGHTS = {
         "reasoning_consistency":  0.10,
         "action_ordering":        0.10,
     },
+    "realtime": {
+        "correctness":            0.35,
+        "confidence_calibration": 0.20,
+        "trajectory_quality":     0.10,
+        "feature_utilization":    0.15,
+        "reasoning_consistency":  0.10,
+        "action_ordering":        0.10,
+    },
 }
 
 # ── Difficulty-aware score scaling ──────────────────────────────────────
@@ -72,6 +80,7 @@ DIFFICULTY_SCALING = {
     "hard":        0.59,   # adversarial   → max ≈ 0.55
     "medium_hard": 0.55,   # streaming     → max ≈ 0.51
     "extreme":     0.41,   # phone-call    → max ≈ 0.38
+    "realtime":    0.72,   # clean data, time-penalized → max ≈ 0.68 before penalty
 }
 
 # ── Keywords for reasoning consistency check ────────────────────────────
@@ -104,7 +113,7 @@ def _score_confidence_calibration(
     Wrong + high confidence → zero
     """
     if correct:
-        if difficulty in ("easy", "medium"):
+        if difficulty in ("easy", "medium", "realtime"):
             # Reward higher confidence when correct on easier tasks
             raw = 0.6 + 0.35 * confidence  # max 0.95 at confidence=1.0
             return max(0.05, min(0.95, raw))
