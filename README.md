@@ -81,7 +81,7 @@ This creates a real decision-making challenge where the agent must:
 
 ## 🏆 The 6 Tasks
 
-There are 6 tasks, each getting harder. The first five tasks test whether an agent can read a signal correctly. The sixth tests whether it knows when it has read enough. The harder tasks usually have messier audio, which makes fake voices harder to detect.
+There are 6 tasks, each getting harder. The harder tasks usually have messier audio, which makes fake voices harder to detect.
 
 | Task | How Hard | Expected Score | What Makes It Different |
 |------|----------|---------------|----------------------|
@@ -92,11 +92,13 @@ There are 6 tasks, each getting harder. The first five tasks test whether an age
 | `phonecall_detection` | Extreme | 0.25 to 0.42 | Simulates a real phone call with bad audio quality and background noise. |
 | `realtime_detection` | Realtime | 0.50 to 0.68 | The agent can decide early, but every extra step costs points. Tests speed vs accuracy. |
 
+The first five tasks test whether an agent can read a signal correctly. The sixth tests whether it knows when it has read enough.
+
 ### Why Harder Tasks Get Lower Scores
 
 This is on purpose. Harder tasks have genuinely worse audio quality, which means even a perfect agent will score lower. The scoring system accounts for this, so a score of 0.35 on the phone call task might actually be impressive, while 0.60 on the clean task would be average.
 
-### The Realtime Detection Task (New!)
+### The Realtime Detection Task
 
 This task changes the rules. Instead of following a fixed 5-step sequence, the agent can make its final decision **at any point after step 2**.
 
@@ -305,12 +307,12 @@ Runs: 1 episode per task, seed=7
 
 | Task | How Hard | Score | Passed? | Notes |
 |------|----------|-------|---------|-------|
-| clean_detection | Easy | 0.74 | Yes | Clean audio, easy to detect |
+| clean_detection | Easy | 0.73 | Yes | Clean audio, easy to detect |
 | compressed_detection | Medium | 0.62 | Yes | Compression hides some clues |
 | adversarial_detection | Hard | 0.55 | No | Fake voices designed to fool detection |
-| streaming_detection | Medium-Hard | 0.30 | No | Noisy early data fooled the model |
+| streaming_detection | Medium-Hard | 0.52 | No | Noisy early data, agent adapted better than before (up from 0.30) |
 | phonecall_detection | Extreme | 0.22 | No | Phone audio too degraded for reliable detection |
-| realtime_detection | Realtime | TBD | TBD | Quick classify with minimal time penalty |
+| realtime_detection | Realtime | 0.67 | Yes | Classified at step 3, time penalty of 0.03 applied |
 
 Scores go down as tasks get harder. This is by design. Harder tasks have genuinely worse audio quality, so even a perfect agent scores lower.
 

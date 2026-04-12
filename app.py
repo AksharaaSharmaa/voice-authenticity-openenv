@@ -22,7 +22,6 @@ TASKS = [
     "adversarial_detection",
     "streaming_detection",
     "phonecall_detection",
-    "realtime_detection",
 ]
 
 envs = {task: VoiceAuthenticityEnv(task) for task in TASKS}
@@ -45,15 +44,12 @@ _dashboard_html = None
 def _load_dashboard():
     global _dashboard_html
     if _dashboard_html is None:
-        html_path = os.path.join(os.path.dirname(__file__), "Dashboard.html")
+        # Dashboard.html lives in the project root (one level up from server/)
+        html_path = os.path.join(os.path.dirname(__file__), "..", "Dashboard.html")
+        html_path = os.path.abspath(html_path)
         with open(html_path, "r", encoding="utf-8") as f:
             _dashboard_html = f.read()
     return _dashboard_html
-
-
-@app.get("/", response_class=HTMLResponse)
-def root():
-    return _load_dashboard()
 
 
 @app.get("/web", response_class=HTMLResponse)
@@ -110,6 +106,18 @@ def state():
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "voice-authenticity-openenv"}
+
+
+@app.get("/")
+def root():
+    return {
+        "name": "voice-authenticity-openenv",
+        "version": "2.0.0",
+        "status": "running",
+        "tasks": TASKS,
+        "web": "/web",
+        "docs": "/docs"
+    }
 
 
 def main():
