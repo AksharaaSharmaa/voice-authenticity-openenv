@@ -304,6 +304,88 @@ async def run_task(client: OpenAI, task_name: str):
             score=score,
             rewards=rewards,
         )
+
+
+async def run_realtime_task(client: OpenAI, task_name: str):
+    """Run one episode of realtime_detection.
+
+    Strategy: gather 2 features (temporal + spectral) then classify
+    immediately to minimize the time penalty (-0.03 per extra step).
+    The agent only takes 3 steps total: 2 gathering + 1 classify.
+    """
+    rewards: List[float] = []
+    steps_taken = 0
+    success = False
+    score = 0.05
+    context = {}
+
+    log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
+
+    try:
+        # Reset
+        reset_response = env_reset(task_name)
+        observation = reset_response.get("observation", {})
+        context = {
+            "task_name": observation.get("task_name", task_name),
+            "difficulty": observation.get("difficulty", ""),
+            "visible_features": {},
+            "comparison_result": None,
+            "evidence_summary": None,
+            "actions_taken": [],
+        }
+
+        # Step 1: Request temporal features
+        action1 = {"action_type": "request_temporal_features"}
+        step1 = env_step(action1, task_name)
+        observation = step1.get("observation", {})
+        reward1 = _clamp_score(float(step1.get("reward", 0.05)))
+        rewards.append(reward1)
+        steps_taken = 1
+        context["visible_features"] = observation.get("visible_features", {})
+        context["actions_taken"] = observation.get("actions_taken", [])
+        log_step(step=1, action=action1, reward=reward1,
+                 done=step1.get("done", False), error=None)
+
+        # Step 2: Request spectral features
+        action2 = {"action_type": "request_spectral_features"}
+        step2 = env_step(action2, task_name)
+        observation = step2.get("observation", {})
+        reward2 = _clamp_score(float(step2.get("reward", 0.05)))
+        rewards.append(reward2)
+        steps_taken = 2
+        context["visible_features"] = observation.get("visible_features", {})
+        context["actions_taken"] = observation.get("actions_taken", [])
+        log_step(step=2, action=action2, reward=reward2,
+                 done=step2.get("done", False), error=None)
+
+        # Step 3: Classify immediately (no extra steps = no time penalty)
+        classification = get_classification(client, context)
+        action3 = {
+            "action_type": "final_classify",
+            "label": classification["label"],
+            "confidence": classification["confidence"],
+            "reasoning": classification.get("reasoning", ""),
+        }
+        step3 = env_step(action3, task_name)
+        reward3 = _clamp_score(float(step3.get("reward", 0.05)))
+        rewards.append(reward3)
+        steps_taken = 3
+        log_step(step=3, action=action3, reward=reward3,
+                 done=step3.get("done", True), error=None)
+
+        score = reward3
+        success = score >= SUCCESS_SCORE_THRESHOLD
+
+    except Exception as e:
+        print(f"[DEBUG] Task error: {e}", flush=True)
+
+    finally:
+        log_end(
+            success=success,
+            steps=steps_taken,
+            score=score,
+            rewards=rewards,
+        )
 async def main():
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     tasks = [
@@ -312,9 +394,13 @@ async def main():
         "adversarial_detection",
         "streaming_detection",
         "phonecall_detection",
+        "realtime_detection",
     ]
     for task in tasks:
-        await run_task(client, task)
+        if task == "realtime_detection":
+            await run_realtime_task(client, task)
+        else:
+            await run_task(client, task)
 
 
 if __name__ == "__main__":
