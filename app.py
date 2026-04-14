@@ -39,9 +39,8 @@ class ActionRequest(BaseModel):
 
 # ── Serve Dashboard.html at /web ─────────────────────────────────────────────
 
-# Root of the project = one level up from this file (server/main.py → project/)
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DASHBOARD_PATH = os.path.join(PROJECT_ROOT, "Dashboard.html")
+# app.py lives in the project root, so __file__ IS the root — no ".." needed
+DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Dashboard.html")
 
 _dashboard_html: Optional[str] = None
 
@@ -51,8 +50,7 @@ def _load_dashboard() -> str:
     if _dashboard_html is None:
         if not os.path.exists(DASHBOARD_PATH):
             raise FileNotFoundError(
-                f"Dashboard.html not found at {DASHBOARD_PATH}. "
-                "Make sure it exists in the project root directory."
+                f"Dashboard.html not found at {DASHBOARD_PATH}"
             )
         with open(DASHBOARD_PATH, "r", encoding="utf-8") as f:
             _dashboard_html = f.read()
