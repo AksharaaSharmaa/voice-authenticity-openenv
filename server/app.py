@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 import os
-
 from environment.env import VoiceAuthenticityEnv
 
 app = FastAPI(
@@ -22,7 +21,7 @@ TASKS = [
     "adversarial_detection",
     "streaming_detection",
     "phonecall_detection",
-    "realtime_detection",  # this is missing
+    "realtime_detection",
 ]
 
 envs = {task: VoiceAuthenticityEnv(task) for task in TASKS}
@@ -38,27 +37,40 @@ class ActionRequest(BaseModel):
     task_name: Optional[str] = None
 
 
-# ── Serve Dashboard.html at /web ────────────────────────────────────────
+# ── Serve Dashboard.html at /web ─────────────────────────────────────────────
 
-_dashboard_html = None
+# Root of the project = one level up from this file (server/main.py → project/)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DASHBOARD_PATH = os.path.join(PROJECT_ROOT, "Dashboard.html")
 
-def _load_dashboard():
+_dashboard_html: Optional[str] = None
+
+
+def _load_dashboard() -> str:
     global _dashboard_html
     if _dashboard_html is None:
-        # Dashboard.html lives in the project root (one level up from server/)
-        html_path = os.path.join(os.path.dirname(__file__), "..", "Dashboard.html")
-        html_path = os.path.abspath(html_path)
-        with open(html_path, "r", encoding="utf-8") as f:
+        if not os.path.exists(DASHBOARD_PATH):
+            raise FileNotFoundError(
+                f"Dashboard.html not found at {DASHBOARD_PATH}. "
+                "Make sure it exists in the project root directory."
+            )
+        with open(DASHBOARD_PATH, "r", encoding="utf-8") as f:
             _dashboard_html = f.read()
     return _dashboard_html
 
 
 @app.get("/web", response_class=HTMLResponse)
 def web_interface():
-    return _load_dashboard()
+    try:
+        return _load_dashboard()
+    except FileNotFoundError as e:
+        return HTMLResponse(
+            content=f"<h2>Dashboard not found</h2><p>{e}</p>",
+            status_code=404
+        )
 
 
-# ── API Endpoints ───────────────────────────────────────────────────────
+# ── API Endpoints ─────────────────────────────────────────────────────────────
 
 @app.post("/reset")
 def reset(request: dict = {}):
@@ -123,6 +135,7 @@ def root():
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)
+
 
 if __name__ == "__main__":
     main()
